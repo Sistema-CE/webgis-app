@@ -1,17 +1,54 @@
-# WEBGIS GEO — Classificação Territorial v1
+# WEBGIS GEO — Motores de Análise v1
 
-## Novidades
-- análise diferenciada da base Urbana/Rural;
-- cálculo percentual da AOI em área urbana e rural;
-- classificação territorial predominante;
-- identificação de setores censitários;
-- municípios, distritos, bairros, núcleos urbanos e aglomerados;
-- população e domicílios dos setores intersectados;
-- cartão específico no Dashboard;
-- seção própria no Relatório.
+## Nova arquitetura
 
-## Observação
-Os totais populacionais e domiciliares correspondem aos setores censitários intersectados e não representam estimativa proporcional da população dentro da AOI.
+A ferramenta agora possui motores independentes:
+
+- `generico`
+- `municipio`
+- `classificacao_territorial`
+- `processo_minerario`
+- `app_hidrica` — reservado para a próxima etapa
+
+## Contexto interno
+
+A Classificação Territorial alimenta um contexto reutilizável:
+
+```javascript
+WEBGIS.getTerritorialContext()
+WEBGIS.getMunicipios()
+WEBGIS.getAnm()
+WEBGIS.getAnalysisContext()
+```
+
+O contexto territorial contém:
+
+- situação predominante;
+- percentual e área urbana;
+- percentual e área rural;
+- municípios;
+- distritos;
+- bairros;
+- núcleos urbanos;
+- aglomerados;
+- setores;
+- população;
+- domicílios.
+
+## Organização
+
+```text
+js/motores/
+├── registro.js
+├── generico.js
+├── municipios.js
+├── classificacao-territorial.js
+├── anm.js
+└── app-hidrica.js
+```
+
+Dashboard e relatório consultam os motores registrados. Uma evolução futura poderá alterar apenas um motor sem modificar os demais.
 
 ## Publicação
+
 Substitua integralmente os arquivos do repositório `webgis-app`.

@@ -266,9 +266,11 @@ btnRun.onclick=async()=>{
         if(intersection.geom) hitGeoms.push(intersection.geom);
       }
 
-      const municipalityBreakdown=analyzeMunicipalityBreakdown(base,features,aoiArea);
-      const anmProcesses=analyzeAnmProcesses(base,features,aoiArea);
-      const territorialClassification=analyzeTerritorialClassification(base,features,aoiArea);
+      const engineOutput=WEBGIS_ANALYSIS.execute(base,features,aoiArea);
+      const municipalityBreakdown=engineOutput.municipalityBreakdown||null;
+      const anmProcesses=engineOutput.anmProcesses||null;
+      const territorialClassification=engineOutput.territorialClassification||null;
+      const hydricAnalysis=engineOutput.hydricAnalysis||null;
       const pct=aoiArea>0?(totalArea/aoiArea)*100:0;
       const uniqueNames=[...new Set(names)];
 
@@ -276,6 +278,8 @@ btnRun.onclick=async()=>{
         base:base.name,
         baseId:base.id,
         role:base.role||'',
+        analysisType:base.analysisType||'generico',
+        engineId:engineOutput.engineId||'generico',
         group:base.group,
         source:base.source,
         hit:uniqueNames.length>0,
@@ -289,6 +293,7 @@ btnRun.onclick=async()=>{
         municipalityBreakdown,
         anmProcesses,
         territorialClassification,
+        hydricAnalysis,
         dashboardEnabled:base.dashboardEnabled===true,
         specialReportEnabled:base.specialReportEnabled===true,
         specialAnalysisEnabled:base.specialAnalysisEnabled===true,
@@ -308,6 +313,8 @@ btnRun.onclick=async()=>{
         base:base.name,
         baseId:base.id,
         role:base.role||'',
+        analysisType:base.analysisType||'generico',
+        engineId:(WEBGIS_ANALYSIS.resolve(base)||{}).id||'generico',
         group:base.group,
         source:base.source,
         hit:false,
@@ -319,6 +326,7 @@ btnRun.onclick=async()=>{
         municipalityBreakdown:null,
         anmProcesses:null,
         territorialClassification:null,
+        hydricAnalysis:null,
         dashboardEnabled:base.dashboardEnabled===true,
         specialReportEnabled:base.specialReportEnabled===true,
         specialAnalysisEnabled:base.specialAnalysisEnabled===true,
@@ -328,9 +336,11 @@ btnRun.onclick=async()=>{
       });
     }
 
+    WEBGIS_ANALYSIS.rebuildContext(results);
     renderResults();
   }
 
+  WEBGIS_ANALYSIS.rebuildContext(results);
   log('runLog',`Análise concluída. Bases: ${results.length}. Interseções: ${results.filter(result=>result.hit).length}.`);
 };
 
@@ -388,8 +398,11 @@ function renderDashboard(){
     card.className=`dashboard-card ${statusClass}`;
 
     let body='';
+    const engineBody=result.status==='ERRO'?'':WEBGIS_ANALYSIS.dashboardBody(result);
     if(result.status==='ERRO'){
       body=`<div>${escapeHtml(result.feature||'Falha durante a análise.')}</div>`;
+    }else if(engineBody){
+      body=engineBody;
     }else if(result.role==='municipios'&&result.municipalityBreakdown?.length){
       const list=result.municipalityBreakdown.map(item=>`
         <div class="dashboard-municipality-item">
