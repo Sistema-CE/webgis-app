@@ -193,3 +193,25 @@ body.settings-modal-open{overflow:hidden}
   .dashboard-stats{grid-template-columns:1fr 1fr}
   .dashboard-card-header{flex-direction:column}
 }
+
+
+/* Cartão inteligente da ANM */
+.dashboard-anm-list{
+  display:grid;
+  gap:9px;
+  margin-top:10px;
+}
+.dashboard-anm-item{
+  padding:10px;
+  border:1px solid #d8dee9;
+  border-radius:10px;
+  background:rgba(255,255,255,.82);
+  font-size:11px;
+  line-height:1.5;
+}
+.dashboard-anm-process{
+  font-size:13px;
+  font-weight:900;
+  color:#7c2d12;
+  margin-bottom:5px;
+}

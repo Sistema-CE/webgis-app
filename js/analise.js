@@ -64,6 +64,70 @@ function analyzeMunicipalityBreakdown(base,features,aoiArea){
   return breakdown;
 }
 
+
+function firstProperty(properties,keys,fallback=''){
+  for(const key of keys){
+    if(key && properties[key]!==undefined && properties[key]!==null && String(properties[key]).trim()!==''){
+      return properties[key];
+    }
+  }
+  return fallback;
+}
+
+function analyzeAnmProcesses(base,features,aoiArea){
+  if(base.role!=='anm' || !base.specialAnalysisEnabled) return null;
+
+  const fields=base.fieldMap||{};
+  const records=[];
+  const seen=new Set();
+
+  for(const feature of features){
+    const intersection=checkIntersection(aoi,feature);
+    if(!intersection.hit) continue;
+
+    const properties=feature.properties||{};
+    const processo=String(firstProperty(properties,[
+      fields.processo,'DSProcesso','dsprocesso','PROCESSO','processo'
+    ],'Processo não informado'));
+    const nome=String(firstProperty(properties,[
+      fields.nome,'NOME','Nome','nome'
+    ],'Titular não informado'));
+    const fase=String(firstProperty(properties,[
+      fields.fase,'FASE','Fase','fase'
+    ],'Fase não informada'));
+    const substancia=String(firstProperty(properties,[
+      fields.substancia,'SUBS','Subs','subs'
+    ],'Substância não informada'));
+
+    const areaProcessoRaw=firstProperty(properties,[
+      fields.area,'AREA_HA','Area_HA','area_ha'
+    ],0);
+    const areaProcesso=Number(String(areaProcessoRaw).replace(',','.'))||0;
+    const overlapArea=intersection.geom ? areaHa(intersection.geom) : 0;
+    const overlapPct=aoiArea>0 ? (overlapArea/aoiArea)*100 : 0;
+
+    const uniqueKey=[processo,nome,fase,substancia,areaProcesso].join('|');
+    if(seen.has(uniqueKey)) continue;
+    seen.add(uniqueKey);
+
+    records.push({
+      processo,
+      areaProcesso,
+      fase,
+      nome,
+      substancia,
+      areaSobreposta:overlapArea,
+      percentualAoi:overlapPct
+    });
+  }
+
+  records.sort((a,b)=>
+    b.areaSobreposta-a.areaSobreposta ||
+    a.processo.localeCompare(b.processo,'pt-BR')
+  );
+  return records;
+}
+
 btnRun.onclick=async()=>{
   if(!aoi){
     alert('Defina a área de interesse.');
@@ -98,6 +162,7 @@ btnRun.onclick=async()=>{
       }
 
       const municipalityBreakdown=analyzeMunicipalityBreakdown(base,features,aoiArea);
+      const anmProcesses=analyzeAnmProcesses(base,features,aoiArea);
       const pct=aoiArea>0?(totalArea/aoiArea)*100:0;
       const uniqueNames=[...new Set(names)];
 
@@ -115,7 +180,11 @@ btnRun.onclick=async()=>{
         status:'OK',
         hitGeoms,
         baseFeatures:intersectedFeatures,
-        municipalityBreakdown
+        municipalityBreakdown,
+        anmProcesses,
+        dashboardEnabled:base.dashboardEnabled===true,
+        specialReportEnabled:base.specialReportEnabled===true,
+        specialAnalysisEnabled:base.specialAnalysisEnabled===true
       });
 
       hitGeoms.forEach(geometry=>{
@@ -137,7 +206,11 @@ btnRun.onclick=async()=>{
         pct:0,
         url:base.url,
         status:'ERRO',
-        municipalityBreakdown:null
+        municipalityBreakdown:null,
+        anmProcesses:null,
+        dashboardEnabled:base.dashboardEnabled===true,
+        specialReportEnabled:base.specialReportEnabled===true,
+        specialAnalysisEnabled:base.specialAnalysisEnabled===true
       });
     }
 
@@ -212,6 +285,23 @@ function renderDashboard(){
       body=`
         <div>A Área de Interesse está distribuída entre:</div>
         <div class="dashboard-municipality-list">${list}</div>`;
+    }else if(
+      result.role==='anm' &&
+      result.dashboardEnabled===true &&
+      result.anmProcesses?.length
+    ){
+      const processList=result.anmProcesses.map(item=>`
+        <div class="dashboard-anm-item">
+          <div class="dashboard-anm-process">${escapeHtml(item.processo)}</div>
+          <div><b>Titular:</b> ${escapeHtml(item.nome)}</div>
+          <div><b>Fase:</b> ${escapeHtml(item.fase)}</div>
+          <div><b>Substância:</b> ${escapeHtml(item.substancia)}</div>
+          <div><b>Área do processo:</b> ${fmt(item.areaProcesso,2)} ha</div>
+          <div><b>Sobreposição com a AOI:</b> ${fmt(item.areaSobreposta,4)} ha (${fmt(item.percentualAoi,2)}%)</div>
+        </div>`).join('');
+      body=`
+        <div><b>${result.anmProcesses.length}</b> processo(s) minerário(s) incidente(s) na Área de Interesse.</div>
+        <div class="dashboard-anm-list">${processList}</div>`;
     }else if(result.hit){
       const areaText=result.area?`${fmt(result.area,4)} ha`:'interseção identificada';
       const pctText=result.pct?` (${fmt(result.pct,2)}% da área)`:'';

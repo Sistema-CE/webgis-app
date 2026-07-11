@@ -21,7 +21,11 @@ function normalizeCatalogBase(item){
     version:item.versaoBase||'',
     updatedAt:item.dataAtualizacao||item.dataBase||'',
     role:String(item.papel||item.role||'').toLowerCase(),
-    codeField:item.campoCodigo||item.codeField||''
+    codeField:item.campoCodigo||item.codeField||'',
+    dashboardEnabled:item.dashboard===true,
+    specialReportEnabled:item.relatorioEspecial===true || item.relatorio===true,
+    specialAnalysisEnabled:item.analiseEspecial===true,
+    fieldMap:item.campos||item.fieldMap||{}
   };
 }
 

@@ -1,18 +1,27 @@
-# WEBGIS GEO — Dashboard de Resultados v1
+# WEBGIS GEO — ANM Inteligente v1
 
-Esta versão adiciona um painel visual simplificado para usuários não técnicos.
+Esta versão adiciona um analisador específico para os processos minerários da ANM.
 
-## O dashboard mostra
+## Regras condicionais
 
-- total de bases analisadas;
-- bases com interseção;
-- bases sem interseção;
-- bases com erro;
-- cartão individual para cada base;
-- distribuição percentual por município, quando aplicável.
+Os recursos especiais da ANM somente aparecem quando:
 
-A tabela técnica detalhada continua disponível logo abaixo do dashboard.
+1. a base está ligada nas Configurações;
+2. o catálogo possui `"papel": "anm"`;
+3. o catálogo possui `"analiseEspecial": true`;
+4. o cartão usa `"dashboard": true`;
+5. o relatório especial usa `"relatorioEspecial": true`.
+
+## Informações exibidas
+
+- DSProcesso;
+- AREA_HA;
+- FASE;
+- NOME;
+- SUBS;
+- área de sobreposição com a AOI;
+- percentual da AOI.
 
 ## Publicação
 
-Envie o conteúdo desta pasta para a raiz do repositório `webgis-app`.
+Substitua integralmente os arquivos do repositório `webgis-app` pelo conteúdo deste pacote.
