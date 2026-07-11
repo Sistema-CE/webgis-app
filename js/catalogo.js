@@ -63,18 +63,30 @@ function persistBaseStyle(base){
   saveBaseStyleOverrides(overrides);
 }
 
+function applyBaseStyleToExistingLayer(base){
+  const layer=vectorVisualLayers.get(base.id);
+  if(!layer) return;
+  setVectorLayerOpacity(layer,base);
+}
+
+function cancelPendingBaseVisualLoad(baseId){
+  vectorVisualLoadTokens.set(baseId,(vectorVisualLoadTokens.get(baseId)||0)+1);
+}
+
 function restoreBaseCatalogStyle(base){
   const overrides=loadBaseStyleOverrides();
   delete overrides[base.id];
   saveBaseStyleOverrides(overrides);
+
   base.style={...base.catalogStyle};
-  invalidateBaseVisualLayer(base);
+  applyBaseStyleToExistingLayer(base);
   saveBases();
   renderBases();
-  renderWms();
+  renderWmsPanel();
 }
 
 function invalidateBaseVisualLayer(base){
+  cancelPendingBaseVisualLoad(base.id);
   const layer=vectorVisualLayers.get(base.id);
   if(layer&&map.hasLayer(layer)) map.removeLayer(layer);
   vectorVisualLayers.delete(base.id);
@@ -85,10 +97,10 @@ function updateBaseStyle(base,patch){
   base.style.strokeWidth=clampNumber(base.style.strokeWidth,0,12,2);
   base.style.strokeOpacity=clampNumber(base.style.strokeOpacity,0,1,1);
   base.style.fillOpacity=clampNumber(base.style.fillOpacity,0,1,.15);
+
   persistBaseStyle(base);
-  invalidateBaseVisualLayer(base);
+  applyBaseStyleToExistingLayer(base);
   saveBases();
-  renderWms();
 }
 
 function normalizeCatalogBase(item){
@@ -318,6 +330,7 @@ function isVisualizableBase(b){
   return ['wms','wfs','arcgis','geojson','embedded','local'].includes(String(b.type||'').toLowerCase()) || isWmsBase(b);
 }
 const vectorVisualLayers=new Map();
+const vectorVisualLoadTokens=new Map();
 
 function visualStyle(base){
   const source=base.style||base.catalogStyle||heuristicVisualStyle(base.name);
@@ -345,18 +358,32 @@ function setVectorLayerOpacity(layer,base){
   });
 }
 async function ensureVectorVisualLayer(base){
-  if(vectorVisualLayers.has(base.id)) return vectorVisualLayers.get(base.id);
+  if(vectorVisualLayers.has(base.id)){
+    const existing=vectorVisualLayers.get(base.id);
+    setVectorLayerOpacity(existing,base);
+    return existing;
+  }
+
+  const token=(vectorVisualLoadTokens.get(base.id)||0)+1;
+  vectorVisualLoadTokens.set(base.id,token);
+
   const fc=await fetchBaseFeatures(base);
+
+  if(vectorVisualLoadTokens.get(base.id)!==token){
+    throw new Error('Carregamento cancelado.');
+  }
+
   const s=visualStyle(base);
   const layer=L.geoJSON(fc,{
     style:()=>s,
-    pointToLayer:(f,latlng)=>L.circleMarker(latlng,{radius:5,...s}),
-    onEachFeature:(f,l)=>{
-      const p=f.properties||{};
-      const title=p[base.nameField]||p.Name||p.NOME||p.nome||base.name;
-      l.bindPopup(`<b>${String(title)}</b><br>${base.name}`);
+    pointToLayer:(feature,latlng)=>L.circleMarker(latlng,{radius:5,...s}),
+    onEachFeature:(feature,leafletLayer)=>{
+      const properties=feature.properties||{};
+      const title=properties[base.nameField]||properties.Name||properties.NOME||properties.nome||base.name;
+      leafletLayer.bindPopup(`<b>${String(title)}</b><br>${base.name}`);
     }
   });
+
   setVectorLayerOpacity(layer,base);
   vectorVisualLayers.set(base.id,layer);
   return layer;
@@ -382,20 +409,35 @@ function renderWms(){
   if(wmsLayerGroup.getLayers().length && !map.hasLayer(wmsLayerGroup)) wmsLayerGroup.addTo(map);
   if(!wmsLayerGroup.getLayers().length && map.hasLayer(wmsLayerGroup)) map.removeLayer(wmsLayerGroup);
 
-  bases.filter(b=>isVisualizableBase(b)&&!isWmsBase(b)).forEach(async b=>{
+  bases.filter(base=>isVisualizableBase(base)&&!isWmsBase(base)).forEach(async base=>{
+    if(base.visible!==true){
+      cancelPendingBaseVisualLoad(base.id);
+      const existing=vectorVisualLayers.get(base.id);
+      if(existing&&map.hasLayer(existing)) map.removeLayer(existing);
+      return;
+    }
+
     try{
-      if(b.visible===true){
-        const layer=await ensureVectorVisualLayer(b);
-        if(!map.hasLayer(layer)) layer.addTo(map);
-      }else{
-        const layer=vectorVisualLayers.get(b.id);
-        if(layer&&map.hasLayer(layer)) map.removeLayer(layer);
+      const layer=await ensureVectorVisualLayer(base);
+
+      // A base pode ter sido desligada enquanto o arquivo era carregado.
+      if(base.visible!==true){
+        if(map.hasLayer(layer)) map.removeLayer(layer);
+        return;
       }
+
+      setVectorLayerOpacity(layer,base);
+      if(!map.hasLayer(layer)) layer.addTo(map);
       bringAnalysisLayersToFront();
-    }catch(err){
-      b.visible=false; saveBases();
-      console.warn('Falha ao visualizar '+b.name,err);
-      const cb=document.getElementById('vis_'+b.id); if(cb)cb.checked=false;
+    }catch(error){
+      if(String(error?.message||error)==='Carregamento cancelado.') return;
+
+      base.visible=false;
+      cancelPendingBaseVisualLoad(base.id);
+      saveBases();
+      console.warn('Falha ao visualizar '+base.name,error);
+      const checkbox=document.getElementById('vis_'+base.id);
+      if(checkbox) checkbox.checked=false;
     }
   });
   renderWmsPanel();
