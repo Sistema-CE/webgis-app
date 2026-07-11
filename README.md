@@ -1,9 +1,11 @@
-# WEBGIS GEO — Arquitetura de Análises v1
+# WEBGIS GEO — Arquitetura de Análises v1.1
 
-## Novidades
-- reconhecimento de `tipoAnalise`;
-- agrupamento temático recolhível no menu Configurações;
-- exibição do tipo de análise de cada base;
-- preservação de Municípios, ANM, Dashboard, Relatório e editor de estilos.
+Correção do agrupamento temático nas Configurações.
 
-Nesta etapa, os novos tipos são apenas reconhecidos. As regras de Classificação Territorial e APP Hídrica entram nas próximas etapas.
+## Correção
+- grupos agora expandem e recolhem corretamente;
+- o conteúdo recolhido é realmente ocultado;
+- o indicador visual acompanha o estado do grupo.
+
+## Publicação
+Substitua integralmente os arquivos do repositório `webgis-app` pelo conteúdo deste pacote.

@@ -207,10 +207,11 @@ function renderBases(){
     const header=section.querySelector('.catalog-group-header');
     const content=section.querySelector('.catalog-group-content');
     header.addEventListener('click',()=>{
-      const expanded=header.getAttribute('aria-expanded')==='true';
-      header.setAttribute('aria-expanded',String(!expanded));
-      content.hidden=expanded;
-      section.classList.toggle('collapsed',expanded);
+      const isOpen=header.getAttribute('aria-expanded')==='true';
+      const nextOpen=!isOpen;
+      header.setAttribute('aria-expanded',String(nextOpen));
+      content.hidden=!nextOpen;
+      section.classList.toggle('collapsed',!nextOpen);
     });
 
     groupBases.forEach(base=>{

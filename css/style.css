@@ -365,3 +365,7 @@ body.settings-modal-open{overflow:hidden}
 .catalog-group.collapsed .catalog-group-chevron{transform:rotate(-90deg)}
 .catalog-group-content{display:grid;gap:10px;padding:10px;background:#f8fafc}
 .analysis-type-badge{display:inline-block!important;width:max-content;margin-top:5px!important;padding:3px 7px;border-radius:999px;background:#e0f2fe;color:#075985!important;font-size:9px!important;font-weight:800;text-transform:uppercase}
+
+.catalog-group-content[hidden]{
+  display:none!important;
+}
