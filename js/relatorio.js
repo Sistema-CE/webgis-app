@@ -150,7 +150,18 @@ async function captureIntersectionMap(result,index){
   L.tileLayer(tile.url,{maxZoom:20,crossOrigin:true,attribution:tile.attr}).addTo(temp);
   const group=L.featureGroup().addTo(temp);
   L.geoJSON(aoi,{style:{color:'#2563eb',weight:4,fillColor:'#60a5fa',fillOpacity:.12}}).addTo(group);
-  (result.baseFeatures||[]).forEach(f=>L.geoJSON(f,{style:{color:'#f59e0b',weight:3,fillColor:'#fbbf24',fillOpacity:.18},pointToLayer:(ft,ll)=>L.circleMarker(ll,{radius:8,color:'#b45309',weight:2,fillColor:'#f59e0b',fillOpacity:.9})}).addTo(group));
+  const reportBaseStyle=result.baseStyle||{color:'#f59e0b',weight:3,opacity:1,fillColor:'#fbbf24',fillOpacity:.18,fill:true,dashArray:''};
+  (result.baseFeatures||[]).forEach(feature=>L.geoJSON(feature,{
+    style:reportBaseStyle,
+    pointToLayer:(currentFeature,latlng)=>L.circleMarker(latlng,{
+      radius:8,
+      color:reportBaseStyle.color,
+      weight:Math.max(1,reportBaseStyle.weight||2),
+      opacity:reportBaseStyle.opacity??1,
+      fillColor:reportBaseStyle.fillColor||reportBaseStyle.color,
+      fillOpacity:reportBaseStyle.fill===false?0:(reportBaseStyle.fillOpacity??.8)
+    })
+  }).addTo(group));
   (result.hitGeoms||[]).forEach(g=>L.geoJSON(g,{style:{color:'#dc2626',weight:5,fillColor:'#ef4444',fillOpacity:.38},pointToLayer:(ft,ll)=>L.circleMarker(ll,{radius:10,color:'#991b1b',weight:3,fillColor:'#ef4444',fillOpacity:1})}).addTo(group));
   // O enquadramento do mapa individual deve ser definido exclusivamente pela Área de Interesse.
   // A extensão total da unidade ambiental não participa do cálculo de zoom/centralização.

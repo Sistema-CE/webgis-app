@@ -215,3 +215,142 @@ body.settings-modal-open{overflow:hidden}
   color:#7c2d12;
   margin-bottom:5px;
 }
+
+
+/* Editor de estilos das bases */
+.catalog-base-style-card{
+  display:block;
+  padding:0;
+  overflow:hidden;
+}
+.catalog-base-main{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  padding:12px 14px;
+}
+.catalog-base-actions{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex:0 0 auto;
+}
+.base-style-toggle{
+  width:auto;
+  margin:0;
+  padding:7px 10px;
+  font-size:11px;
+}
+.base-style-editor{
+  padding:14px;
+  border-top:1px solid #e2e8f0;
+  background:#f8fafc;
+}
+.base-style-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+}
+.base-style-grid>label{
+  display:block;
+  padding:10px;
+  border:1px solid #e2e8f0;
+  border-radius:10px;
+  background:#fff;
+}
+.base-style-grid>label>span{
+  display:block;
+  margin-bottom:7px;
+  font-size:11px;
+  font-weight:800;
+  color:#334155;
+}
+.base-style-grid input[type="color"]{
+  width:100%;
+  height:38px;
+  padding:2px;
+  border:1px solid #cbd5e1;
+  border-radius:8px;
+  background:#fff;
+  cursor:pointer;
+}
+.style-range-row{
+  display:grid;
+  grid-template-columns:1fr 62px;
+  gap:8px;
+  align-items:center;
+}
+.style-range-row input[type="range"]{
+  width:100%;
+}
+.style-range-row output{
+  font-size:11px;
+  font-weight:800;
+  color:#0f172a;
+  text-align:right;
+}
+.style-checkbox-label{
+  display:flex!important;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+.style-checkbox-label>span{
+  margin:0!important;
+}
+.style-checkbox-label input{
+  width:20px;
+  height:20px;
+}
+.style-checkbox-label b{
+  min-width:82px;
+  font-size:10px;
+  color:#475569;
+}
+.base-style-footer{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-top:12px;
+}
+.restore-base-style{
+  width:auto;
+  margin:0;
+  padding:8px 10px;
+  font-size:11px;
+}
+.base-style-note{
+  margin-bottom:10px;
+  padding:9px 10px;
+  border-radius:8px;
+  background:#fff7ed;
+  color:#9a3412;
+  font-size:11px;
+  line-height:1.4;
+}
+.disabled-style-grid{
+  opacity:.45;
+  pointer-events:none;
+}
+@media(max-width:640px){
+  .catalog-base-main{
+    align-items:flex-start;
+    flex-direction:column;
+  }
+  .catalog-base-actions{
+    width:100%;
+    justify-content:space-between;
+  }
+  .base-style-grid{
+    grid-template-columns:1fr;
+  }
+  .base-style-footer{
+    align-items:stretch;
+    flex-direction:column;
+  }
+  .restore-base-style{
+    width:100%;
+  }
+}

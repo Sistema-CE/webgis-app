@@ -1,10 +1,106 @@
+
+function clampNumber(value,min,max,fallback){
+  const number=Number(value);
+  return Number.isFinite(number)?Math.min(max,Math.max(min,number)):fallback;
+}
+
+function loadBaseStyleOverrides(){
+  try{
+    const value=JSON.parse(localStorage.getItem(LS_BASE_STYLE_OVERRIDES)||'{}');
+    return value&&typeof value==='object'&&!Array.isArray(value)?value:{};
+  }catch(error){
+    return {};
+  }
+}
+
+function saveBaseStyleOverrides(value){
+  localStorage.setItem(LS_BASE_STYLE_OVERRIDES,JSON.stringify(value||{}));
+}
+
+function heuristicVisualStyle(name){
+  const n=String(name||'').toLowerCase();
+  if(n.includes('mata atlântica')) return {strokeColor:'#1b5e20',strokeWidth:2,strokeOpacity:1,fillColor:'#43a047',fillOpacity:.18,fillEnabled:true,dashArray:''};
+  if(n.includes('municip')) return {strokeColor:'#37474f',strokeWidth:1.4,strokeOpacity:1,fillColor:'#90a4ae',fillOpacity:.025,fillEnabled:true,dashArray:'5,4'};
+  if(n.includes('cipp')||n.includes('pecém')) return {strokeColor:'#d84315',strokeWidth:2.5,strokeOpacity:1,fillColor:'#ff7043',fillOpacity:.18,fillEnabled:true,dashArray:''};
+  if(n.includes('massa')) return {strokeColor:'#1565c0',strokeWidth:1.8,strokeOpacity:1,fillColor:'#42a5f5',fillOpacity:.22,fillEnabled:true,dashArray:''};
+  if(n.includes('curso')) return {strokeColor:'#0d47a1',strokeWidth:2.2,strokeOpacity:1,fillColor:'#0d47a1',fillOpacity:0,fillEnabled:false,dashArray:''};
+  if(n.includes('cnuc')||n.includes('conservação')) return {strokeColor:'#6a1b9a',strokeWidth:2,strokeOpacity:1,fillColor:'#ab47bc',fillOpacity:.14,fillEnabled:true,dashArray:''};
+  if(n.includes('anm')||n.includes('miner')) return {strokeColor:'#92400e',strokeWidth:2,strokeOpacity:1,fillColor:'#f59e0b',fillOpacity:.14,fillEnabled:true,dashArray:''};
+  return {strokeColor:'#7c3aed',strokeWidth:2,strokeOpacity:1,fillColor:'#a78bfa',fillOpacity:.12,fillEnabled:true,dashArray:''};
+}
+
+function catalogStyleFromItem(item,name){
+  const fallback=heuristicVisualStyle(name);
+  const strokeColor=item.corContorno||item.cor||fallback.strokeColor;
+  const fillColor=item.corPreenchimento||item.fillColor||item.cor||fallback.fillColor;
+  return {
+    strokeColor,
+    strokeWidth:clampNumber(item.espessuraLinha??item.strokeWidth,0,12,fallback.strokeWidth),
+    strokeOpacity:clampNumber(item.opacidadeContorno??item.strokeOpacity,0,1,fallback.strokeOpacity),
+    fillColor,
+    fillOpacity:clampNumber(item.opacidadePreenchimento??item.fillOpacity??item.opacidade,0,1,fallback.fillOpacity),
+    fillEnabled:item.preenchimento!==false && item.fillEnabled!==false,
+    dashArray:String(item.tracejado||item.dashArray||fallback.dashArray||'')
+  };
+}
+
+function mergeBaseStyle(baseId,catalogStyle){
+  const overrides=loadBaseStyleOverrides();
+  return {...catalogStyle,...(overrides[baseId]||{})};
+}
+
+function persistBaseStyle(base){
+  const overrides=loadBaseStyleOverrides();
+  overrides[base.id]={
+    strokeColor:base.style.strokeColor,
+    strokeWidth:base.style.strokeWidth,
+    strokeOpacity:base.style.strokeOpacity,
+    fillColor:base.style.fillColor,
+    fillOpacity:base.style.fillOpacity,
+    fillEnabled:base.style.fillEnabled,
+    dashArray:base.style.dashArray||''
+  };
+  saveBaseStyleOverrides(overrides);
+}
+
+function restoreBaseCatalogStyle(base){
+  const overrides=loadBaseStyleOverrides();
+  delete overrides[base.id];
+  saveBaseStyleOverrides(overrides);
+  base.style={...base.catalogStyle};
+  invalidateBaseVisualLayer(base);
+  saveBases();
+  renderBases();
+  renderWms();
+}
+
+function invalidateBaseVisualLayer(base){
+  const layer=vectorVisualLayers.get(base.id);
+  if(layer&&map.hasLayer(layer)) map.removeLayer(layer);
+  vectorVisualLayers.delete(base.id);
+}
+
+function updateBaseStyle(base,patch){
+  base.style={...base.style,...patch};
+  base.style.strokeWidth=clampNumber(base.style.strokeWidth,0,12,2);
+  base.style.strokeOpacity=clampNumber(base.style.strokeOpacity,0,1,1);
+  base.style.fillOpacity=clampNumber(base.style.fillOpacity,0,1,.15);
+  persistBaseStyle(base);
+  invalidateBaseVisualLayer(base);
+  saveBases();
+  renderWms();
+}
+
 function normalizeCatalogBase(item){
   const type=String(item.tipo||item.type||'geojson').toLowerCase();
+  const name=item.nome||item.name||'Base sem nome';
+  const id=item.id||uid();
+  const catalogStyle=catalogStyleFromItem(item,name);
   return {
-    id:item.id||uid(),
+    id,
     active:item.ativo!==false && item.analisar!==false,
     visible:item.visivelInicialmente===true,
-    name:item.nome||item.name||'Base sem nome',
+    name,
     group:item.grupo||item.group||'Outras Bases',
     source:item.fonte||item.source||'',
     type,
@@ -25,7 +121,9 @@ function normalizeCatalogBase(item){
     dashboardEnabled:item.dashboard===true,
     specialReportEnabled:item.relatorioEspecial===true || item.relatorio===true,
     specialAnalysisEnabled:item.analiseEspecial===true,
-    fieldMap:item.campos||item.fieldMap||{}
+    fieldMap:item.campos||item.fieldMap||{},
+    catalogStyle,
+    style:mergeBaseStyle(id,catalogStyle)
   };
 }
 
@@ -67,7 +165,6 @@ function renderBases(){
   const activeCount=bases.filter(base=>base.active).length;
   const count=document.getElementById('baseCount');
   if(count) count.textContent=activeCount;
-
   if(!list) return;
 
   list.innerHTML='';
@@ -77,45 +174,143 @@ function renderBases(){
   }
 
   bases.forEach(base=>{
+    if(!base.catalogStyle){
+      base.catalogStyle=heuristicVisualStyle(base.name);
+    }
+    if(!base.style){
+      base.style=mergeBaseStyle(base.id,base.catalogStyle);
+    }
+
     const item=document.createElement('div');
-    item.className='catalog-base-item';
+    item.className='catalog-base-item catalog-base-style-card';
     const safeName=escapeHtml(base.name||'Base sem nome');
     const safeGroup=escapeHtml(base.group||'Sem grupo');
     const safeSource=escapeHtml(base.source||'Fonte não informada');
+    const vectorStyleAvailable=!isWmsBase(base);
 
     item.innerHTML=`
-      <div class="catalog-base-info">
-        <strong>${safeName}</strong>
-        <span>${safeGroup} · ${safeSource}</span>
+      <div class="catalog-base-main">
+        <div class="catalog-base-info">
+          <strong>${safeName}</strong>
+          <span>${safeGroup} · ${safeSource}</span>
+        </div>
+        <div class="catalog-base-actions">
+          <button class="base-style-toggle secondary" type="button">Editar estilo</button>
+          <div>
+            <label class="switch" title="Ligar ou desligar base na análise">
+              <input class="base-active-input" type="checkbox" ${base.active?'checked':''} aria-label="Ativar ${safeName}">
+              <span class="slider"></span>
+            </label>
+            <div class="switch-label">${base.active?'LIGADA':'DESLIGADA'}</div>
+          </div>
+        </div>
       </div>
-      <div>
-        <label class="switch" title="Ligar ou desligar base na análise">
-          <input type="checkbox" ${base.active?'checked':''} aria-label="Ativar ${safeName}">
-          <span class="slider"></span>
-        </label>
-        <div class="switch-label">${base.active?'LIGADA':'DESLIGADA'}</div>
+
+      <div class="base-style-editor" hidden>
+        ${vectorStyleAvailable?'':`
+          <div class="base-style-note">
+            Em bases WMS, apenas a transparência geral do painel de camadas pode ser alterada. Cores e linhas são definidas pelo servidor.
+          </div>`}
+        <div class="base-style-grid ${vectorStyleAvailable?'':'disabled-style-grid'}">
+          <label>
+            <span>Cor do contorno</span>
+            <input class="style-stroke-color" type="color" value="${base.style.strokeColor}">
+          </label>
+          <label>
+            <span>Espessura da linha</span>
+            <div class="style-range-row">
+              <input class="style-stroke-width" type="range" min="0" max="8" step="0.2" value="${base.style.strokeWidth}">
+              <output>${Number(base.style.strokeWidth).toFixed(1)} px</output>
+            </div>
+          </label>
+          <label>
+            <span>Transparência da linha</span>
+            <div class="style-range-row">
+              <input class="style-stroke-opacity" type="range" min="0" max="100" step="1" value="${Math.round(base.style.strokeOpacity*100)}">
+              <output>${Math.round((1-base.style.strokeOpacity)*100)}%</output>
+            </div>
+          </label>
+          <label>
+            <span>Cor do preenchimento</span>
+            <input class="style-fill-color" type="color" value="${base.style.fillColor}">
+          </label>
+          <label>
+            <span>Transparência do preenchimento</span>
+            <div class="style-range-row">
+              <input class="style-fill-opacity" type="range" min="0" max="100" step="1" value="${Math.round(base.style.fillOpacity*100)}">
+              <output>${Math.round((1-base.style.fillOpacity)*100)}%</output>
+            </div>
+          </label>
+          <label class="style-checkbox-label">
+            <span>Preenchimento</span>
+            <input class="style-fill-enabled" type="checkbox" ${base.style.fillEnabled?'checked':''}>
+            <b>${base.style.fillEnabled?'ATIVADO':'DESATIVADO'}</b>
+          </label>
+        </div>
+        <div class="base-style-footer">
+          <span class="small">As alterações ficam salvas neste navegador.</span>
+          <button class="restore-base-style secondary" type="button">Restaurar estilo do catálogo</button>
+        </div>
       </div>`;
 
-    const input=item.querySelector('input');
-    const label=item.querySelector('.switch-label');
-    input.addEventListener('change',()=>{
-      base.active=input.checked;
-      label.textContent=base.active?'LIGADA':'DESLIGADA';
+    const activeInput=item.querySelector('.base-active-input');
+    const stateLabel=item.querySelector('.switch-label');
+    activeInput.addEventListener('change',()=>{
+      base.active=activeInput.checked;
+      stateLabel.textContent=base.active?'LIGADA':'DESLIGADA';
       saveBases();
       renderWms();
       const status=document.getElementById('catalogStatus');
-      if(status){
-        status.textContent=`${bases.filter(b=>b.active).length} de ${bases.length} base(s) ligadas para análise.`;
-      }
+      if(status) status.textContent=`${bases.filter(b=>b.active).length} de ${bases.length} base(s) ligadas para análise.`;
+    });
+
+    const toggle=item.querySelector('.base-style-toggle');
+    const editor=item.querySelector('.base-style-editor');
+    toggle.addEventListener('click',()=>{
+      editor.hidden=!editor.hidden;
+      toggle.textContent=editor.hidden?'Editar estilo':'Fechar estilo';
+    });
+
+    if(vectorStyleAvailable){
+      const bindRange=(selector,property,transform,format)=>{
+        const input=item.querySelector(selector);
+        const output=input.parentElement.querySelector('output');
+        input.addEventListener('input',()=>{
+          const value=transform(input.value);
+          output.textContent=format(value);
+          updateBaseStyle(base,{[property]:value});
+        });
+      };
+
+      item.querySelector('.style-stroke-color').addEventListener('input',event=>{
+        updateBaseStyle(base,{strokeColor:event.target.value});
+      });
+      item.querySelector('.style-fill-color').addEventListener('input',event=>{
+        updateBaseStyle(base,{fillColor:event.target.value});
+      });
+      bindRange('.style-stroke-width','strokeWidth',value=>Number(value),value=>`${value.toFixed(1)} px`);
+      bindRange('.style-stroke-opacity','strokeOpacity',value=>Number(value)/100,value=>`${Math.round((1-value)*100)}%`);
+      bindRange('.style-fill-opacity','fillOpacity',value=>Number(value)/100,value=>`${Math.round((1-value)*100)}%`);
+
+      const fillEnabled=item.querySelector('.style-fill-enabled');
+      const fillState=fillEnabled.parentElement.querySelector('b');
+      fillEnabled.addEventListener('change',()=>{
+        fillState.textContent=fillEnabled.checked?'ATIVADO':'DESATIVADO';
+        updateBaseStyle(base,{fillEnabled:fillEnabled.checked});
+      });
+    }else{
+      item.querySelectorAll('.base-style-grid input').forEach(input=>input.disabled=true);
+    }
+
+    item.querySelector('.restore-base-style').addEventListener('click',()=>{
+      restoreBaseCatalogStyle(base);
     });
 
     list.appendChild(item);
   });
 
   const status=document.getElementById('catalogStatus');
-  if(status){
-    status.textContent=`${activeCount} de ${bases.length} base(s) ligadas para análise.`;
-  }
+  if(status) status.textContent=`${activeCount} de ${bases.length} base(s) ligadas para análise.`;
 }
 
 function isWmsBase(b){return (b.type==='wms'||b.type==='auto'||!b.type) && String(b.url||'').toLowerCase().includes('wms');}
@@ -125,21 +320,28 @@ function isVisualizableBase(b){
 const vectorVisualLayers=new Map();
 
 function visualStyle(base){
-  const n=String(base.name||'').toLowerCase();
-  if(n.includes('mata atlântica')) return {color:'#1b5e20',weight:2,fillColor:'#43a047',fillOpacity:.18};
-  if(n.includes('municip')) return {color:'#37474f',weight:1.4,fillColor:'#90a4ae',fillOpacity:.025,dashArray:'5,4'};
-  if(n.includes('cipp')||n.includes('pecém')) return {color:'#d84315',weight:2.5,fillColor:'#ff7043',fillOpacity:.18};
-  if(n.includes('massa')) return {color:'#1565c0',weight:1.8,fillColor:'#42a5f5',fillOpacity:.22};
-  if(n.includes('curso')) return {color:'#0d47a1',weight:2.2,fillOpacity:0};
-  if(n.includes('cnuc')||n.includes('conservação')) return {color:'#6a1b9a',weight:2,fillColor:'#ab47bc',fillOpacity:.14};
-  return {color:'#7c3aed',weight:2,fillColor:'#a78bfa',fillOpacity:.12};
+  const source=base.style||base.catalogStyle||heuristicVisualStyle(base.name);
+  return {
+    color:source.strokeColor,
+    weight:Number(source.strokeWidth),
+    opacity:Number(source.strokeOpacity),
+    fillColor:source.fillColor,
+    fillOpacity:source.fillEnabled===false?0:Number(source.fillOpacity),
+    fill:source.fillEnabled!==false,
+    dashArray:source.dashArray||''
+  };
 }
 function currentVisualOpacity(){return Number(document.getElementById('wmsOpacity')?.value||55)/100;}
 function setVectorLayerOpacity(layer,base){
   const op=currentVisualOpacity(), s=visualStyle(base);
-  layer.setStyle?.({...s,opacity:Math.max(.25,op),fillOpacity:(s.fillOpacity||0)*op});
-  layer.eachLayer?.(l=>{
-    if(l.setStyle && !l.feature?.geometry?.type?.includes('Polygon')) l.setStyle({...s,opacity:Math.max(.25,op)});
+  const finalStyle={
+    ...s,
+    opacity:Math.min(1,Math.max(0,s.opacity*op)),
+    fillOpacity:Math.min(1,Math.max(0,(s.fillOpacity||0)*op))
+  };
+  layer.setStyle?.(finalStyle);
+  layer.eachLayer?.(child=>{
+    if(child.setStyle) child.setStyle(finalStyle);
   });
 }
 async function ensureVectorVisualLayer(base){

@@ -1,22 +1,33 @@
-# WEBGIS GEO — Labels nos Mapas do Relatório v1
+# WEBGIS GEO — Editor de Estilos das Bases v1
 
-Esta versão adiciona rótulos diretamente nas imagens dos mapas individuais do relatório.
+Esta versão adiciona ao menu Configurações um editor visual para as bases vetoriais.
 
-## Regras dos rótulos
+## Opções disponíveis
 
-- Municípios: usa `NM_MUN`;
-- ANM: usa `DSProcesso`;
-- Demais bases: usa o `campoNome` definido no catálogo, quando disponível.
+- cor do contorno;
+- espessura da linha;
+- transparência do contorno;
+- cor do preenchimento;
+- transparência do preenchimento;
+- ativar ou desativar o preenchimento;
+- restaurar o estilo original definido no catálogo.
 
-Os labels são aplicados apenas às feições que efetivamente intersectam a Área de Interesse.
+## Persistência
 
-## Características
+Os estilos personalizados são salvos no `localStorage` do navegador e continuam válidos quando o catálogo online é atualizado.
 
-- fundo branco semitransparente;
-- borda escura para melhorar a leitura;
-- quebra automática de textos longos;
-- tentativa de evitar sobreposição entre rótulos;
-- limite de 50 rótulos por mapa para preservar legibilidade e desempenho.
+## Aplicação dos estilos
+
+Os estilos são usados:
+
+- na visualização das bases no mapa;
+- nas imagens individuais geradas no relatório.
+
+As áreas exatas de interseção continuam destacadas em vermelho para facilitar a leitura técnica.
+
+## WMS
+
+Em bases WMS, cores, espessuras e preenchimentos são controlados pelo servidor. A ferramenta mantém para essas bases somente o controle geral de transparência do painel de camadas.
 
 ## Publicação
 
