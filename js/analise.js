@@ -157,6 +157,83 @@ function resultFeatureHtml(result){
   return `${featureText}<div class="small" style="margin-top:6px">${rows}</div>`;
 }
 
+
+function renderDashboard(){
+  const summary=document.getElementById('dashboardSummary');
+  const stats=document.getElementById('dashboardStats');
+  const cards=document.getElementById('dashboardCards');
+  if(!summary||!stats||!cards) return;
+
+  const total=results.length;
+  const hits=results.filter(result=>result.hit&&result.status!=='ERRO').length;
+  const errors=results.filter(result=>result.status==='ERRO').length;
+  const clear=results.filter(result=>!result.hit&&result.status!=='ERRO').length;
+
+  stats.innerHTML=`
+    <div class="dashboard-stat"><b>${total}</b><span>bases analisadas</span></div>
+    <div class="dashboard-stat hit"><b>${hits}</b><span>com interseção</span></div>
+    <div class="dashboard-stat clear"><b>${clear}</b><span>sem interseção</span></div>
+    <div class="dashboard-stat warning"><b>${errors}</b><span>com erro</span></div>`;
+
+  if(!total){
+    summary.className='dashboard-summary neutral';
+    summary.textContent='Execute a checagem para visualizar um resumo simplificado dos resultados.';
+    cards.innerHTML='<div class="dashboard-empty">Nenhum resultado disponível.</div>';
+    return;
+  }
+
+  if(errors){
+    summary.className='dashboard-summary warning';
+    summary.textContent=`A análise foi concluída, mas ${errors} base(s) apresentaram erro. Revise os cartões abaixo antes de usar o relatório.`;
+  }else if(hits){
+    summary.className='dashboard-summary alert';
+    summary.textContent=`Atenção: foram identificadas interseções em ${hits} de ${total} base(s) analisadas.`;
+  }else{
+    summary.className='dashboard-summary clear';
+    summary.textContent=`Nenhuma interseção foi identificada nas ${total} base(s) analisadas.`;
+  }
+
+  cards.innerHTML='';
+  results.forEach(result=>{
+    const statusClass=result.status==='ERRO'?'error':(result.hit?'hit':'clear');
+    const statusLabel=result.status==='ERRO'?'NÃO ANALISADA':(result.hit?'INTERSEÇÃO':'SEM INTERSEÇÃO');
+    const card=document.createElement('div');
+    card.className=`dashboard-card ${statusClass}`;
+
+    let body='';
+    if(result.status==='ERRO'){
+      body=`<div>${escapeHtml(result.feature||'Falha durante a análise.')}</div>`;
+    }else if(result.role==='municipios'&&result.municipalityBreakdown?.length){
+      const list=result.municipalityBreakdown.map(item=>`
+        <div class="dashboard-municipality-item">
+          <span><b>${escapeHtml(item.nome)}</b></span>
+          <span>${fmt(item.pct,2)}%</span>
+        </div>`).join('');
+      body=`
+        <div>A Área de Interesse está distribuída entre:</div>
+        <div class="dashboard-municipality-list">${list}</div>`;
+    }else if(result.hit){
+      const areaText=result.area?`${fmt(result.area,4)} ha`:'interseção identificada';
+      const pctText=result.pct?` (${fmt(result.pct,2)}% da área)`:'';
+      body=`<div><b>Resultado:</b> ${areaText}${pctText}</div>
+            <div><b>Feição:</b> ${escapeHtml(result.feature||'Não identificada')}</div>`;
+    }else{
+      body='<div>Não foi identificada sobreposição com a Área de Interesse.</div>';
+    }
+
+    card.innerHTML=`
+      <div class="dashboard-card-header">
+        <div>
+          <div class="dashboard-card-title">${escapeHtml(result.base)}</div>
+          <div class="dashboard-card-subtitle">${escapeHtml(result.group||'')} · ${escapeHtml(result.source||'')}</div>
+        </div>
+        <span class="dashboard-card-badge ${statusClass}">${statusLabel}</span>
+      </div>
+      <div class="dashboard-card-body">${body}</div>`;
+    cards.appendChild(card);
+  });
+}
+
 function renderResults(){
   const tbody=document.querySelector('#resultsTable tbody');
   tbody.innerHTML='';
@@ -172,6 +249,7 @@ function renderResults(){
   resBases.textContent=results.length;
   resHits.textContent=results.filter(result=>result.hit).length;
   resArea.textContent=fmt(results.reduce((sum,result)=>sum+(result.area||0),0));
+  renderDashboard();
 }
 
 btnCsv.onclick=()=>{
