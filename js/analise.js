@@ -184,7 +184,9 @@ btnRun.onclick=async()=>{
         anmProcesses,
         dashboardEnabled:base.dashboardEnabled===true,
         specialReportEnabled:base.specialReportEnabled===true,
-        specialAnalysisEnabled:base.specialAnalysisEnabled===true
+        specialAnalysisEnabled:base.specialAnalysisEnabled===true,
+        nameField:base.nameField||'',
+        fieldMap:base.fieldMap||{}
       });
 
       hitGeoms.forEach(geometry=>{
@@ -210,7 +212,9 @@ btnRun.onclick=async()=>{
         anmProcesses:null,
         dashboardEnabled:base.dashboardEnabled===true,
         specialReportEnabled:base.specialReportEnabled===true,
-        specialAnalysisEnabled:base.specialAnalysisEnabled===true
+        specialAnalysisEnabled:base.specialAnalysisEnabled===true,
+        nameField:base.nameField||'',
+        fieldMap:base.fieldMap||{}
       });
     }
 

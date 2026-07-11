@@ -1,26 +1,22 @@
-# WEBGIS GEO — ANM Inteligente v1
+# WEBGIS GEO — Labels nos Mapas do Relatório v1
 
-Esta versão adiciona um analisador específico para os processos minerários da ANM.
+Esta versão adiciona rótulos diretamente nas imagens dos mapas individuais do relatório.
 
-## Regras condicionais
+## Regras dos rótulos
 
-Os recursos especiais da ANM somente aparecem quando:
+- Municípios: usa `NM_MUN`;
+- ANM: usa `DSProcesso`;
+- Demais bases: usa o `campoNome` definido no catálogo, quando disponível.
 
-1. a base está ligada nas Configurações;
-2. o catálogo possui `"papel": "anm"`;
-3. o catálogo possui `"analiseEspecial": true`;
-4. o cartão usa `"dashboard": true`;
-5. o relatório especial usa `"relatorioEspecial": true`.
+Os labels são aplicados apenas às feições que efetivamente intersectam a Área de Interesse.
 
-## Informações exibidas
+## Características
 
-- DSProcesso;
-- AREA_HA;
-- FASE;
-- NOME;
-- SUBS;
-- área de sobreposição com a AOI;
-- percentual da AOI.
+- fundo branco semitransparente;
+- borda escura para melhorar a leitura;
+- quebra automática de textos longos;
+- tentativa de evitar sobreposição entre rótulos;
+- limite de 50 rótulos por mapa para preservar legibilidade e desempenho.
 
 ## Publicação
 

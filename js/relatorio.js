@@ -3,11 +3,143 @@ function selectedBaseTile(){
   if(currentBaseMap===baseMaps.satellite) return {url:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',attr:'Tiles © Esri, Maxar, Earthstar Geographics e demais fornecedores'};
   return {url:'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',attr:'© OpenStreetMap'};
 }
-function leafletMapToDataUrl(m){
+function leafletMapToCanvas(m){
   return new Promise((resolve,reject)=>{
     if(typeof leafletImage!=='function') return reject(new Error('Biblioteca de captura não carregada.'));
-    leafletImage(m,(err,canvas)=>{ if(err) reject(err); else resolve(canvas.toDataURL('image/png',0.92)); });
+    leafletImage(m,(err,canvas)=>{ if(err) reject(err); else resolve(canvas); });
   });
+}
+
+function reportFeatureLabel(result,feature){
+  const properties=feature?.properties||{};
+  const candidates=[];
+
+  if(result.role==='municipios'){
+    candidates.push('NM_MUN','nm_mun','NOME','Nome','name');
+  }else if(result.role==='anm'){
+    candidates.push(
+      result.fieldMap?.processo,
+      'DSProcesso','dsprocesso','PROCESSO','processo'
+    );
+  }else{
+    candidates.push(
+      result.nameField,
+      'nome_uc','NOME','Name','nome','name',
+      'DSProcesso','PROCESSO'
+    );
+  }
+
+  for(const field of candidates){
+    if(!field) continue;
+    const value=properties[field];
+    if(value!==undefined && value!==null && String(value).trim()){
+      return String(value).trim();
+    }
+  }
+  return '';
+}
+
+function reportFeatureLabelPosition(feature){
+  try{
+    const point=turf.pointOnFeature(feature);
+    const coordinates=point?.geometry?.coordinates;
+    if(Array.isArray(coordinates) && coordinates.length>=2){
+      return {lat:coordinates[1],lng:coordinates[0]};
+    }
+  }catch(error){}
+
+  try{
+    const center=turf.center(feature);
+    const coordinates=center?.geometry?.coordinates;
+    if(Array.isArray(coordinates) && coordinates.length>=2){
+      return {lat:coordinates[1],lng:coordinates[0]};
+    }
+  }catch(error){}
+  return null;
+}
+
+function splitMapLabel(text,maxLength=28){
+  const normalized=String(text||'').trim();
+  if(normalized.length<=maxLength) return [normalized];
+
+  const words=normalized.split(/\s+/);
+  const lines=[''];
+  for(const word of words){
+    const current=lines[lines.length-1];
+    const candidate=current?current+' '+word:word;
+    if(candidate.length<=maxLength){
+      lines[lines.length-1]=candidate;
+    }else if(lines.length<2){
+      lines.push(word);
+    }else{
+      lines[1]=(lines[1]+' '+word).trim();
+    }
+  }
+  if(lines[1] && lines[1].length>maxLength){
+    lines[1]=lines[1].slice(0,maxLength-1)+'…';
+  }
+  return lines.filter(Boolean);
+}
+
+function drawReportLabels(canvas,labelItems){
+  if(!labelItems?.length) return canvas;
+
+  const context=canvas.getContext('2d');
+  const occupied=[];
+  context.save();
+  context.font='700 15px Arial';
+  context.textBaseline='middle';
+
+  for(const item of labelItems.slice(0,50)){
+    const lines=splitMapLabel(item.text);
+    if(!lines.length) continue;
+
+    const paddingX=7;
+    const paddingY=5;
+    const lineHeight=18;
+    const width=Math.max(...lines.map(line=>context.measureText(line).width))+paddingX*2;
+    const height=lines.length*lineHeight+paddingY*2;
+    let x=item.x-width/2;
+    let y=item.y-height/2;
+
+    x=Math.max(4,Math.min(canvas.width-width-4,x));
+    y=Math.max(4,Math.min(canvas.height-height-4,y));
+
+    let attempts=0;
+    while(
+      occupied.some(box=>!(x+width<box.x || x>box.x+box.w || y+height<box.y || y>box.y+box.h)) &&
+      attempts<8
+    ){
+      y=Math.min(canvas.height-height-4,y+height+4);
+      attempts++;
+    }
+
+    occupied.push({x,y,w:width,h:height});
+
+    context.fillStyle='rgba(255,255,255,0.92)';
+    context.strokeStyle='rgba(15,23,42,0.85)';
+    context.lineWidth=1.5;
+    context.beginPath();
+    if(typeof context.roundRect==='function'){
+      context.roundRect(x,y,width,height,5);
+    }else{
+      context.rect(x,y,width,height);
+    }
+    context.fill();
+    context.stroke();
+
+    context.fillStyle='#0f172a';
+    lines.forEach((line,index)=>{
+      context.fillText(
+        line,
+        x+paddingX,
+        y+paddingY+(index*lineHeight)+(lineHeight/2)
+      );
+    });
+  }
+
+  context.restore();
+  return canvas;
 }
 async function captureIntersectionMap(result,index){
   const holder=document.createElement('div');
@@ -42,10 +174,34 @@ async function captureIntersectionMap(result,index){
     }
   }
   await new Promise(r=>setTimeout(r,1800));
+
+  const labelItems=[];
+  const seenLabels=new Set();
+  for(const feature of (result.baseFeatures||[])){
+    const text=reportFeatureLabel(result,feature);
+    const location=reportFeatureLabelPosition(feature);
+    if(!text||!location) continue;
+
+    const point=temp.latLngToContainerPoint([location.lat,location.lng]);
+    const key=`${text}|${Math.round(point.x/8)}|${Math.round(point.y/8)}`;
+    if(seenLabels.has(key)) continue;
+    seenLabels.add(key);
+
+    labelItems.push({text,x:point.x,y:point.y});
+  }
+
   try{
-    const data=await leafletMapToDataUrl(temp);
-    temp.remove(); holder.remove(); return data;
-  }catch(e){ temp.remove(); holder.remove(); throw e; }
+    const canvas=await leafletMapToCanvas(temp);
+    drawReportLabels(canvas,labelItems);
+    const data=canvas.toDataURL('image/png',0.92);
+    temp.remove();
+    holder.remove();
+    return data;
+  }catch(e){
+    temp.remove();
+    holder.remove();
+    throw e;
+  }
 }
 
 function buildAnmReportSection(){
