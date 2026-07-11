@@ -215,6 +215,66 @@ async function captureIntersectionMap(result,index){
   }
 }
 
+
+function buildTerritorialReportSection(){
+  const territorialResults=results.filter(result=>
+    result.role==='classificacao_territorial' &&
+    result.specialReportEnabled===true &&
+    result.territorialClassification
+  );
+  if(!territorialResults.length) return '';
+
+  return territorialResults.map(result=>{
+    const territorial=result.territorialClassification;
+    const distributionRows=territorial.distribution.map(item=>`
+      <tr>
+        <td>${escapeHtml(item.classe)}</td>
+        <td>${fmt(item.area,4)} ha</td>
+        <td>${fmt(item.pct,2)}%</td>
+      </tr>`).join('');
+
+    const sectorRows=territorial.sectors.slice(0,100).map(item=>`
+      <tr>
+        <td>${escapeHtml(item.codigo||'-')}</td>
+        <td>${escapeHtml(item.situacao||'-')}</td>
+        <td>${escapeHtml(item.situacaoDetalhada||'-')}</td>
+        <td>${escapeHtml(item.tipoSetor||'-')}</td>
+        <td>${escapeHtml(item.municipio||'-')}</td>
+        <td>${escapeHtml(item.distrito||'-')}</td>
+        <td>${escapeHtml(item.bairro||item.nucleoUrbano||item.aglomerado||'-')}</td>
+        <td>${fmt(item.areaSobreposta,4)} ha</td>
+        <td>${fmt(item.percentualAoi,2)}%</td>
+      </tr>`).join('');
+
+    return `
+      <h2>Classificação Territorial — Urbana/Rural</h2>
+      <p><b>Base:</b> ${escapeHtml(result.base)}</p>
+      <p><b>Classificação predominante:</b> ${escapeHtml(territorial.dominant)}</p>
+      <table>
+        <thead><tr><th>Classe</th><th>Área na AOI</th><th>Percentual</th></tr></thead>
+        <tbody>${distributionRows}</tbody>
+      </table>
+      <p><b>Municípios:</b> ${escapeHtml(territorial.municipalities.join(', ')||'Não informado')}</p>
+      <p><b>Distritos:</b> ${escapeHtml(territorial.districts.join(', ')||'Não informado')}</p>
+      <p><b>Bairros:</b> ${escapeHtml(territorial.neighborhoods.join(', ')||'Não informado')}</p>
+      <p><b>Núcleos urbanos:</b> ${escapeHtml(territorial.urbanCores.join(', ')||'Não informado')}</p>
+      <p><b>Aglomerados:</b> ${escapeHtml(territorial.settlements.join(', ')||'Não informado')}</p>
+      <p><b>População total dos setores intersectados:</b> ${territorial.population.toLocaleString('pt-BR')}</p>
+      <p><b>Domicílios totais dos setores intersectados:</b> ${territorial.households.toLocaleString('pt-BR')}</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Código do setor</th><th>Situação</th><th>Detalhamento</th>
+            <th>Tipo de setor</th><th>Município</th><th>Distrito</th>
+            <th>Bairro/Núcleo/Aglomerado</th><th>Área na AOI</th><th>% da AOI</th>
+          </tr>
+        </thead>
+        <tbody>${sectorRows}</tbody>
+      </table>
+      ${territorial.sectors.length>100?'<p><i>A tabela foi limitada aos 100 setores com maior área de sobreposição.</i></p>':''}`;
+  }).join('');
+}
+
 function buildAnmReportSection(){
   const anmResults=results.filter(result=>
     result.role==='anm' &&
@@ -271,7 +331,7 @@ async function buildReportHtml(progressButton=null){
   }
   const hitNames=hits.map(r=>r.base).join('; ');
   const errNames=errors.map(r=>r.base+' ('+r.feature+')').join('; ');
-  const html=`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"><title>Relatório de Checagem Ambiental</title><style>@page{size:A4;margin:15mm}body{font-family:Arial,sans-serif;margin:32px;color:#172554;line-height:1.45}h1{color:#0f766e}h2{border-bottom:2px solid #0f766e;padding-bottom:5px}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.card{border:1px solid #ddd;border-radius:12px;padding:12px;background:#f8fafc}b.big{font-size:24px}table{width:100%;border-collapse:collapse;margin-top:16px;font-size:12px}th,td{border:1px solid #ddd;padding:7px;text-align:left}th{background:#ecfdf5}.sim{color:#b91c1c;font-weight:bold}.nao{color:#166534;font-weight:bold}.erro{color:#92400e;font-weight:bold}.note{background:#fefce8;border:1px solid #fde68a;border-radius:12px;padding:12px;margin:16px 0}.map-section{page-break-before:auto;break-inside:avoid;margin:26px 0;padding-top:8px;border-top:1px solid #cbd5e1}.map-section img{display:block;width:100%;max-width:1000px;border:1px solid #94a3b8;border-radius:8px}.legend{font-size:12px;margin:8px 0}.legend span{display:inline-block;width:18px;height:10px;border:2px solid;margin-right:4px}.aoi-box{background:#60a5fa33;border-color:#2563eb!important}.base-box{background:#fbbf2433;border-color:#f59e0b!important}.hit-box{background:#ef444466;border-color:#dc2626!important}.map-error{padding:35px;text-align:center;background:#f8fafc;border:1px dashed #94a3b8}.conclusion{background:#f0fdfa;border-left:5px solid #0f766e;padding:14px}@media print{body{margin:0}.map-section{page-break-before:always}}</style></head><body><h1>Relatório de Checagem de Áreas Sensíveis</h1><p><b>Data e hora:</b> ${new Date().toLocaleString('pt-BR')}</p><h2>1. Identificação da análise</h2><p><b>Área analisada:</b> ${fmt(areaHa(aoi))} ha.</p><h2>2. Resumo dos resultados</h2><div class="grid"><div class="card"><b class="big">${fmt(areaHa(aoi))}</b><br>ha analisados</div><div class="card"><b class="big">${results.length}</b><br>bases consultadas</div><div class="card"><b class="big">${hits.length}</b><br>interseções</div><div class="card"><b class="big">${errors.length}</b><br>erros de consulta</div></div><div class="note">${hits.length?'Foram identificadas interseções entre a área analisada e bases sensíveis.':'Não foram identificadas interseções com as bases consultadas.'}</div><h2>3. Tabela das bases analisadas</h2><table><thead><tr><th>Base</th><th>Fonte</th><th>Resultado</th><th>Feição</th><th>Área sobreposta</th><th>%</th></tr></thead><tbody>${results.map(r=>`<tr><td>${escapeHtml(r.base)}</td><td>${escapeHtml(r.source||'')}</td><td class="${r.status==='ERRO'?'erro':(r.hit?'sim':'nao')}">${r.status==='ERRO'?'Erro':(r.hit?'Sim':'Não')}</td><td>${escapeHtml(r.feature||'-')}${r.municipalityBreakdown&&r.municipalityBreakdown.length?'<div style="margin-top:6px;font-size:11px">'+r.municipalityBreakdown.map(m=>'<div><b>'+escapeHtml(m.nome)+'</b>: '+fmt(m.pct,2)+'% ('+fmt(m.area,4)+' ha)</div>').join('')+'</div>':''}</td><td>${r.area?fmt(r.area)+' ha':'-'}</td><td>${r.pct?fmt(r.pct,2)+'%':'-'}</td></tr>`).join('')}</tbody></table>${results.some(r=>r.municipalityBreakdown&&r.municipalityBreakdown.length)?'<h2>4. Municípios intersectados pela Área de Interesse</h2>'+results.filter(r=>r.municipalityBreakdown&&r.municipalityBreakdown.length).map(r=>'<table><thead><tr><th>Município</th><th>Área da AOI no município</th><th>Percentual da Área de Interesse</th></tr></thead><tbody>'+r.municipalityBreakdown.map(m=>'<tr><td>'+escapeHtml(m.nome)+'</td><td>'+fmt(m.area,4)+' ha</td><td>'+fmt(m.pct,2)+'%</td></tr>').join('')+'</tbody></table>').join(''):''}${buildAnmReportSection()}${hits.length?'<h2>5. Mapas Individuais das Interseções Identificadas</h2>'+mapSections.join(''):'<h2>5. Mapas Individuais das Interseções Identificadas</h2><p>Não há interseções positivas para representação individual.</p>'}<h2>6. Conclusão textual</h2><div class="conclusion"><p>Foram analisadas <b>${results.length}</b> bases ambientais. Foram identificadas <b>${hits.length}</b> bases com interseção${hits.length?': '+escapeHtml(hitNames):'.'}</p>${errors.length?`<p>Apresentaram erro de consulta: ${escapeHtml(errNames)}.</p>`:''}<p>Esta checagem é preliminar e depende da disponibilidade, escala, atualização e precisão das bases consultadas.</p></div>${referencePoints.length?`<h2>Pontos de Referência</h2><table><thead><tr><th>Ponto</th><th>Latitude</th><th>Longitude</th><th>Origem</th></tr></thead><tbody>${referencePoints.map(p=>`<tr><td>${escapeHtml(p.label||'Ponto')}</td><td>${formatCoordinate(p.lat)}</td><td>${formatCoordinate(p.lng)}</td><td>${escapeHtml(p.source||'Manual')}</td></tr>`).join('')}</tbody></table>`:''}<h2>7. Observações e limitações</h2><p>Os resultados não substituem análise técnica, consulta aos órgãos responsáveis ou conferência em bases oficiais atualizadas.</p>
+  const html=`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"><title>Relatório de Checagem Ambiental</title><style>@page{size:A4;margin:15mm}body{font-family:Arial,sans-serif;margin:32px;color:#172554;line-height:1.45}h1{color:#0f766e}h2{border-bottom:2px solid #0f766e;padding-bottom:5px}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.card{border:1px solid #ddd;border-radius:12px;padding:12px;background:#f8fafc}b.big{font-size:24px}table{width:100%;border-collapse:collapse;margin-top:16px;font-size:12px}th,td{border:1px solid #ddd;padding:7px;text-align:left}th{background:#ecfdf5}.sim{color:#b91c1c;font-weight:bold}.nao{color:#166534;font-weight:bold}.erro{color:#92400e;font-weight:bold}.note{background:#fefce8;border:1px solid #fde68a;border-radius:12px;padding:12px;margin:16px 0}.map-section{page-break-before:auto;break-inside:avoid;margin:26px 0;padding-top:8px;border-top:1px solid #cbd5e1}.map-section img{display:block;width:100%;max-width:1000px;border:1px solid #94a3b8;border-radius:8px}.legend{font-size:12px;margin:8px 0}.legend span{display:inline-block;width:18px;height:10px;border:2px solid;margin-right:4px}.aoi-box{background:#60a5fa33;border-color:#2563eb!important}.base-box{background:#fbbf2433;border-color:#f59e0b!important}.hit-box{background:#ef444466;border-color:#dc2626!important}.map-error{padding:35px;text-align:center;background:#f8fafc;border:1px dashed #94a3b8}.conclusion{background:#f0fdfa;border-left:5px solid #0f766e;padding:14px}@media print{body{margin:0}.map-section{page-break-before:always}}</style></head><body><h1>Relatório de Checagem de Áreas Sensíveis</h1><p><b>Data e hora:</b> ${new Date().toLocaleString('pt-BR')}</p><h2>1. Identificação da análise</h2><p><b>Área analisada:</b> ${fmt(areaHa(aoi))} ha.</p><h2>2. Resumo dos resultados</h2><div class="grid"><div class="card"><b class="big">${fmt(areaHa(aoi))}</b><br>ha analisados</div><div class="card"><b class="big">${results.length}</b><br>bases consultadas</div><div class="card"><b class="big">${hits.length}</b><br>interseções</div><div class="card"><b class="big">${errors.length}</b><br>erros de consulta</div></div><div class="note">${hits.length?'Foram identificadas interseções entre a área analisada e bases sensíveis.':'Não foram identificadas interseções com as bases consultadas.'}</div><h2>3. Tabela das bases analisadas</h2><table><thead><tr><th>Base</th><th>Fonte</th><th>Resultado</th><th>Feição</th><th>Área sobreposta</th><th>%</th></tr></thead><tbody>${results.map(r=>`<tr><td>${escapeHtml(r.base)}</td><td>${escapeHtml(r.source||'')}</td><td class="${r.status==='ERRO'?'erro':(r.hit?'sim':'nao')}">${r.status==='ERRO'?'Erro':(r.hit?'Sim':'Não')}</td><td>${escapeHtml(r.feature||'-')}${r.municipalityBreakdown&&r.municipalityBreakdown.length?'<div style="margin-top:6px;font-size:11px">'+r.municipalityBreakdown.map(m=>'<div><b>'+escapeHtml(m.nome)+'</b>: '+fmt(m.pct,2)+'% ('+fmt(m.area,4)+' ha)</div>').join('')+'</div>':''}</td><td>${r.area?fmt(r.area)+' ha':'-'}</td><td>${r.pct?fmt(r.pct,2)+'%':'-'}</td></tr>`).join('')}</tbody></table>${results.some(r=>r.municipalityBreakdown&&r.municipalityBreakdown.length)?'<h2>4. Municípios intersectados pela Área de Interesse</h2>'+results.filter(r=>r.municipalityBreakdown&&r.municipalityBreakdown.length).map(r=>'<table><thead><tr><th>Município</th><th>Área da AOI no município</th><th>Percentual da Área de Interesse</th></tr></thead><tbody>'+r.municipalityBreakdown.map(m=>'<tr><td>'+escapeHtml(m.nome)+'</td><td>'+fmt(m.area,4)+' ha</td><td>'+fmt(m.pct,2)+'%</td></tr>').join('')+'</tbody></table>').join(''):''}${buildTerritorialReportSection()}${buildAnmReportSection()}${hits.length?'<h2>5. Mapas Individuais das Interseções Identificadas</h2>'+mapSections.join(''):'<h2>5. Mapas Individuais das Interseções Identificadas</h2><p>Não há interseções positivas para representação individual.</p>'}<h2>6. Conclusão textual</h2><div class="conclusion"><p>Foram analisadas <b>${results.length}</b> bases ambientais. Foram identificadas <b>${hits.length}</b> bases com interseção${hits.length?': '+escapeHtml(hitNames):'.'}</p>${errors.length?`<p>Apresentaram erro de consulta: ${escapeHtml(errNames)}.</p>`:''}<p>Esta checagem é preliminar e depende da disponibilidade, escala, atualização e precisão das bases consultadas.</p></div>${referencePoints.length?`<h2>Pontos de Referência</h2><table><thead><tr><th>Ponto</th><th>Latitude</th><th>Longitude</th><th>Origem</th></tr></thead><tbody>${referencePoints.map(p=>`<tr><td>${escapeHtml(p.label||'Ponto')}</td><td>${formatCoordinate(p.lat)}</td><td>${formatCoordinate(p.lng)}</td><td>${escapeHtml(p.source||'Manual')}</td></tr>`).join('')}</tbody></table>`:''}<h2>7. Observações e limitações</h2><p>Os resultados não substituem análise técnica, consulta aos órgãos responsáveis ou conferência em bases oficiais atualizadas.</p>
 <div id="utmModal" class="utm-modal" aria-hidden="true">
   <div class="utm-card" role="dialog" aria-modal="true" aria-labelledby="utmTitle">
     <div class="utm-header">

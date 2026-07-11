@@ -65,6 +65,111 @@ function analyzeMunicipalityBreakdown(base,features,aoiArea){
 }
 
 
+
+function analyzeTerritorialClassification(base,features,aoiArea){
+  if(
+    base.role!=='classificacao_territorial' &&
+    base.analysisType!=='classificacao_territorial'
+  ) return null;
+
+  const fields=base.fieldMap||{};
+  const sectors=[];
+  const totals={Urbana:0,Rural:0,Outros:0};
+  const municipalities=new Set();
+  const districts=new Set();
+  const neighborhoods=new Set();
+  const urbanCores=new Set();
+  const settlements=new Set();
+  let population=0;
+  let households=0;
+
+  for(const feature of features){
+    const intersection=checkIntersection(aoi,feature);
+    if(!intersection.hit||!intersection.geom) continue;
+
+    const overlapArea=areaHa(intersection.geom);
+    if(!Number.isFinite(overlapArea)||overlapArea<=0.0000001) continue;
+
+    const properties=feature.properties||{};
+    const situation=String(firstProperty(properties,[
+      fields.situacao,'situacao','SITUACAO'
+    ],'Não classificada')).trim();
+    const normalized=situation.toLowerCase();
+
+    if(normalized.includes('urbana')) totals.Urbana+=overlapArea;
+    else if(normalized.includes('rural')) totals.Rural+=overlapArea;
+    else totals.Outros+=overlapArea;
+
+    const municipality=String(firstProperty(properties,[fields.municipio,'municipio'],'')).trim();
+    const district=String(firstProperty(properties,[fields.distrito,'distrito'],'')).trim();
+    const neighborhood=String(firstProperty(properties,[fields.bairro,'bairro'],'')).trim();
+    const urbanCore=String(firstProperty(properties,[fields.nucleoUrbano,'nucleo_urbano'],'')).trim();
+    const settlement=String(firstProperty(properties,[fields.aglomerado,'aglomerado'],'')).trim();
+
+    if(municipality) municipalities.add(municipality);
+    if(district) districts.add(district);
+    if(neighborhood) neighborhoods.add(neighborhood);
+    if(urbanCore) urbanCores.add(urbanCore);
+    if(settlement) settlements.add(settlement);
+
+    const sectorPopulation=Number(firstProperty(properties,[
+      fields.populacao,'total_de_pessoas'
+    ],0))||0;
+    const sectorHouseholds=Number(firstProperty(properties,[
+      fields.domicilios,'total_de_domicilios'
+    ],0))||0;
+
+    population+=sectorPopulation;
+    households+=sectorHouseholds;
+
+    sectors.push({
+      codigo:String(firstProperty(properties,[fields.codigoSetor,'codigo_setor'],'')).trim(),
+      situacao:situation,
+      situacaoDetalhada:String(firstProperty(properties,[
+        fields.situacaoDetalhada,'situacao_detalhada'
+      ],'')).trim(),
+      tipoSetor:String(firstProperty(properties,[
+        fields.tipoSetor,'tipo_de_setor'
+      ],'')).trim(),
+      municipio:municipality,
+      distrito:district,
+      bairro:neighborhood,
+      nucleoUrbano:urbanCore,
+      aglomerado:settlement,
+      populacao:sectorPopulation,
+      domicilios:sectorHouseholds,
+      areaSobreposta:overlapArea,
+      percentualAoi:aoiArea>0?(overlapArea/aoiArea)*100:0
+    });
+  }
+
+  sectors.sort((a,b)=>b.areaSobreposta-a.areaSobreposta);
+
+  const distribution=[
+    {classe:'Urbana',area:totals.Urbana,pct:aoiArea>0?(totals.Urbana/aoiArea)*100:0},
+    {classe:'Rural',area:totals.Rural,pct:aoiArea>0?(totals.Rural/aoiArea)*100:0},
+    {classe:'Outros/Não classificada',area:totals.Outros,pct:aoiArea>0?(totals.Outros/aoiArea)*100:0}
+  ].filter(item=>item.area>0.0000001);
+
+  let dominant='Não classificada';
+  if(distribution.length){
+    dominant=distribution.slice().sort((a,b)=>b.area-a.area)[0].classe;
+  }
+
+  return {
+    dominant,
+    distribution,
+    sectors,
+    municipalities:[...municipalities].sort((a,b)=>a.localeCompare(b,'pt-BR')),
+    districts:[...districts].sort((a,b)=>a.localeCompare(b,'pt-BR')),
+    neighborhoods:[...neighborhoods].sort((a,b)=>a.localeCompare(b,'pt-BR')),
+    urbanCores:[...urbanCores].sort((a,b)=>a.localeCompare(b,'pt-BR')),
+    settlements:[...settlements].sort((a,b)=>a.localeCompare(b,'pt-BR')),
+    population,
+    households
+  };
+}
+
 function firstProperty(properties,keys,fallback=''){
   for(const key of keys){
     if(key && properties[key]!==undefined && properties[key]!==null && String(properties[key]).trim()!==''){
@@ -163,6 +268,7 @@ btnRun.onclick=async()=>{
 
       const municipalityBreakdown=analyzeMunicipalityBreakdown(base,features,aoiArea);
       const anmProcesses=analyzeAnmProcesses(base,features,aoiArea);
+      const territorialClassification=analyzeTerritorialClassification(base,features,aoiArea);
       const pct=aoiArea>0?(totalArea/aoiArea)*100:0;
       const uniqueNames=[...new Set(names)];
 
@@ -182,6 +288,7 @@ btnRun.onclick=async()=>{
         baseFeatures:intersectedFeatures,
         municipalityBreakdown,
         anmProcesses,
+        territorialClassification,
         dashboardEnabled:base.dashboardEnabled===true,
         specialReportEnabled:base.specialReportEnabled===true,
         specialAnalysisEnabled:base.specialAnalysisEnabled===true,
@@ -211,6 +318,7 @@ btnRun.onclick=async()=>{
         status:'ERRO',
         municipalityBreakdown:null,
         anmProcesses:null,
+        territorialClassification:null,
         dashboardEnabled:base.dashboardEnabled===true,
         specialReportEnabled:base.specialReportEnabled===true,
         specialAnalysisEnabled:base.specialAnalysisEnabled===true,
@@ -291,6 +399,25 @@ function renderDashboard(){
       body=`
         <div>A Área de Interesse está distribuída entre:</div>
         <div class="dashboard-municipality-list">${list}</div>`;
+    }else if(
+      result.role==='classificacao_territorial' &&
+      result.dashboardEnabled===true &&
+      result.territorialClassification
+    ){
+      const territorial=result.territorialClassification;
+      const distribution=territorial.distribution.map(item=>`
+        <div class="dashboard-municipality-item">
+          <span><b>${escapeHtml(item.classe)}</b></span>
+          <span>${fmt(item.pct,2)}%</span>
+        </div>`).join('');
+      body=`
+        <div><b>Classificação predominante:</b> ${escapeHtml(territorial.dominant)}</div>
+        <div class="dashboard-municipality-list">${distribution}</div>
+        <div style="margin-top:8px"><b>Setores atingidos:</b> ${territorial.sectors.length}</div>
+        <div><b>Distritos:</b> ${escapeHtml(territorial.districts.join(', ')||'Não informado')}</div>
+        <div><b>Bairros:</b> ${escapeHtml(territorial.neighborhoods.join(', ')||'Não informado')}</div>
+        <div><b>População dos setores:</b> ${territorial.population.toLocaleString('pt-BR')}</div>
+        <div><b>Domicílios dos setores:</b> ${territorial.households.toLocaleString('pt-BR')}</div>`;
     }else if(
       result.role==='anm' &&
       result.dashboardEnabled===true &&

@@ -375,3 +375,6 @@ body.settings-modal-open{overflow:hidden}
 .catalog-group.collapsed .catalog-group-content{
   display:none;
 }
+
+/* Classificação Territorial */
+.dashboard-card.territorial{border-left-color:#0369a1;background:#f0f9ff}
