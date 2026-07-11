@@ -129,6 +129,7 @@ function normalizeCatalogBase(item){
     version:item.versaoBase||'',
     updatedAt:item.dataAtualizacao||item.dataBase||'',
     role:String(item.papel||item.role||'').toLowerCase(),
+    analysisType:String(item.tipoAnalise||item.analysisType||'generico').toLowerCase(),
     codeField:item.campoCodigo||item.codeField||'',
     dashboardEnabled:item.dashboard===true,
     specialReportEnabled:item.relatorioEspecial===true || item.relatorio===true,
@@ -185,140 +186,125 @@ function renderBases(){
     return;
   }
 
-  bases.forEach(base=>{
-    if(!base.catalogStyle){
-      base.catalogStyle=heuristicVisualStyle(base.name);
-    }
-    if(!base.style){
-      base.style=mergeBaseStyle(base.id,base.catalogStyle);
-    }
+  const groups=new Map();
+  bases.slice().sort((a,b)=>(a.order||999)-(b.order||999)).forEach(base=>{
+    const groupName=base.group||'Outras Bases';
+    if(!groups.has(groupName)) groups.set(groupName,[]);
+    groups.get(groupName).push(base);
+  });
 
-    const item=document.createElement('div');
-    item.className='catalog-base-item catalog-base-style-card';
-    const safeName=escapeHtml(base.name||'Base sem nome');
-    const safeGroup=escapeHtml(base.group||'Sem grupo');
-    const safeSource=escapeHtml(base.source||'Fonte não informada');
-    const vectorStyleAvailable=!isWmsBase(base);
+  groups.forEach((groupBases,groupName)=>{
+    const section=document.createElement('section');
+    section.className='catalog-group';
+    const enabledCount=groupBases.filter(base=>base.active).length;
+    section.innerHTML=`
+      <button class="catalog-group-header" type="button" aria-expanded="true">
+        <span><b>${escapeHtml(groupName)}</b><small>${enabledCount} de ${groupBases.length} ligada(s)</small></span>
+        <span class="catalog-group-chevron">⌄</span>
+      </button>
+      <div class="catalog-group-content"></div>`;
 
-    item.innerHTML=`
-      <div class="catalog-base-main">
-        <div class="catalog-base-info">
-          <strong>${safeName}</strong>
-          <span>${safeGroup} · ${safeSource}</span>
-        </div>
-        <div class="catalog-base-actions">
-          <button class="base-style-toggle secondary" type="button">Editar estilo</button>
-          <div>
-            <label class="switch" title="Ligar ou desligar base na análise">
-              <input class="base-active-input" type="checkbox" ${base.active?'checked':''} aria-label="Ativar ${safeName}">
-              <span class="slider"></span>
-            </label>
-            <div class="switch-label">${base.active?'LIGADA':'DESLIGADA'}</div>
+    const header=section.querySelector('.catalog-group-header');
+    const content=section.querySelector('.catalog-group-content');
+    header.addEventListener('click',()=>{
+      const expanded=header.getAttribute('aria-expanded')==='true';
+      header.setAttribute('aria-expanded',String(!expanded));
+      content.hidden=expanded;
+      section.classList.toggle('collapsed',expanded);
+    });
+
+    groupBases.forEach(base=>{
+      if(!base.catalogStyle) base.catalogStyle=heuristicVisualStyle(base.name);
+      if(!base.style) base.style=mergeBaseStyle(base.id,base.catalogStyle);
+
+      const item=document.createElement('div');
+      item.className='catalog-base-item catalog-base-style-card';
+      const safeName=escapeHtml(base.name||'Base sem nome');
+      const safeSource=escapeHtml(base.source||'Fonte não informada');
+      const vectorStyleAvailable=!isWmsBase(base);
+      const analysisLabel=escapeHtml(base.analysisType||'generico');
+
+      item.innerHTML=`
+        <div class="catalog-base-main">
+          <div class="catalog-base-info">
+            <strong>${safeName}</strong>
+            <span>${safeSource}</span>
+            <span class="analysis-type-badge">Análise: ${analysisLabel}</span>
+          </div>
+          <div class="catalog-base-actions">
+            <button class="base-style-toggle secondary" type="button">Editar estilo</button>
+            <div>
+              <label class="switch">
+                <input class="base-active-input" type="checkbox" ${base.active?'checked':''}>
+                <span class="slider"></span>
+              </label>
+              <div class="switch-label">${base.active?'LIGADA':'DESLIGADA'}</div>
+            </div>
           </div>
         </div>
-      </div>
+        <div class="base-style-editor" hidden>
+          ${vectorStyleAvailable?'':'<div class="base-style-note">Em bases WMS, o estilo é definido pelo servidor.</div>'}
+          <div class="base-style-grid ${vectorStyleAvailable?'':'disabled-style-grid'}">
+            <label><span>Cor do contorno</span><input class="style-stroke-color" type="color" value="${base.style.strokeColor}"></label>
+            <label><span>Espessura da linha</span><div class="style-range-row"><input class="style-stroke-width" type="range" min="0" max="8" step="0.2" value="${base.style.strokeWidth}"><output>${Number(base.style.strokeWidth).toFixed(1)} px</output></div></label>
+            <label><span>Transparência da linha</span><div class="style-range-row"><input class="style-stroke-opacity" type="range" min="0" max="100" step="1" value="${Math.round(base.style.strokeOpacity*100)}"><output>${Math.round((1-base.style.strokeOpacity)*100)}%</output></div></label>
+            <label><span>Cor do preenchimento</span><input class="style-fill-color" type="color" value="${base.style.fillColor}"></label>
+            <label><span>Transparência do preenchimento</span><div class="style-range-row"><input class="style-fill-opacity" type="range" min="0" max="100" step="1" value="${Math.round(base.style.fillOpacity*100)}"><output>${Math.round((1-base.style.fillOpacity)*100)}%</output></div></label>
+            <label class="style-checkbox-label"><span>Preenchimento</span><input class="style-fill-enabled" type="checkbox" ${base.style.fillEnabled?'checked':''}><b>${base.style.fillEnabled?'ATIVADO':'DESATIVADO'}</b></label>
+          </div>
+          <div class="base-style-footer">
+            <span class="small">As alterações ficam salvas neste navegador.</span>
+            <button class="restore-base-style secondary" type="button">Restaurar estilo do catálogo</button>
+          </div>
+        </div>`;
 
-      <div class="base-style-editor" hidden>
-        ${vectorStyleAvailable?'':`
-          <div class="base-style-note">
-            Em bases WMS, apenas a transparência geral do painel de camadas pode ser alterada. Cores e linhas são definidas pelo servidor.
-          </div>`}
-        <div class="base-style-grid ${vectorStyleAvailable?'':'disabled-style-grid'}">
-          <label>
-            <span>Cor do contorno</span>
-            <input class="style-stroke-color" type="color" value="${base.style.strokeColor}">
-          </label>
-          <label>
-            <span>Espessura da linha</span>
-            <div class="style-range-row">
-              <input class="style-stroke-width" type="range" min="0" max="8" step="0.2" value="${base.style.strokeWidth}">
-              <output>${Number(base.style.strokeWidth).toFixed(1)} px</output>
-            </div>
-          </label>
-          <label>
-            <span>Transparência da linha</span>
-            <div class="style-range-row">
-              <input class="style-stroke-opacity" type="range" min="0" max="100" step="1" value="${Math.round(base.style.strokeOpacity*100)}">
-              <output>${Math.round((1-base.style.strokeOpacity)*100)}%</output>
-            </div>
-          </label>
-          <label>
-            <span>Cor do preenchimento</span>
-            <input class="style-fill-color" type="color" value="${base.style.fillColor}">
-          </label>
-          <label>
-            <span>Transparência do preenchimento</span>
-            <div class="style-range-row">
-              <input class="style-fill-opacity" type="range" min="0" max="100" step="1" value="${Math.round(base.style.fillOpacity*100)}">
-              <output>${Math.round((1-base.style.fillOpacity)*100)}%</output>
-            </div>
-          </label>
-          <label class="style-checkbox-label">
-            <span>Preenchimento</span>
-            <input class="style-fill-enabled" type="checkbox" ${base.style.fillEnabled?'checked':''}>
-            <b>${base.style.fillEnabled?'ATIVADO':'DESATIVADO'}</b>
-          </label>
-        </div>
-        <div class="base-style-footer">
-          <span class="small">As alterações ficam salvas neste navegador.</span>
-          <button class="restore-base-style secondary" type="button">Restaurar estilo do catálogo</button>
-        </div>
-      </div>`;
+      const activeInput=item.querySelector('.base-active-input');
+      const stateLabel=item.querySelector('.switch-label');
+      activeInput.addEventListener('change',()=>{
+        base.active=activeInput.checked;
+        stateLabel.textContent=base.active?'LIGADA':'DESLIGADA';
+        saveBases();
+        renderWms();
+        renderBases();
+      });
 
-    const activeInput=item.querySelector('.base-active-input');
-    const stateLabel=item.querySelector('.switch-label');
-    activeInput.addEventListener('change',()=>{
-      base.active=activeInput.checked;
-      stateLabel.textContent=base.active?'LIGADA':'DESLIGADA';
-      saveBases();
-      renderWms();
-      const status=document.getElementById('catalogStatus');
-      if(status) status.textContent=`${bases.filter(b=>b.active).length} de ${bases.length} base(s) ligadas para análise.`;
-    });
+      const toggle=item.querySelector('.base-style-toggle');
+      const editor=item.querySelector('.base-style-editor');
+      toggle.addEventListener('click',()=>{
+        editor.hidden=!editor.hidden;
+        toggle.textContent=editor.hidden?'Editar estilo':'Fechar estilo';
+      });
 
-    const toggle=item.querySelector('.base-style-toggle');
-    const editor=item.querySelector('.base-style-editor');
-    toggle.addEventListener('click',()=>{
-      editor.hidden=!editor.hidden;
-      toggle.textContent=editor.hidden?'Editar estilo':'Fechar estilo';
-    });
-
-    if(vectorStyleAvailable){
-      const bindRange=(selector,property,transform,format)=>{
-        const input=item.querySelector(selector);
-        const output=input.parentElement.querySelector('output');
-        input.addEventListener('input',()=>{
-          const value=transform(input.value);
-          output.textContent=format(value);
-          updateBaseStyle(base,{[property]:value});
+      if(vectorStyleAvailable){
+        const bindRange=(selector,property,transform,format)=>{
+          const input=item.querySelector(selector);
+          const output=input.parentElement.querySelector('output');
+          input.addEventListener('input',()=>{
+            const value=transform(input.value);
+            output.textContent=format(value);
+            updateBaseStyle(base,{[property]:value});
+          });
+        };
+        item.querySelector('.style-stroke-color').addEventListener('input',e=>updateBaseStyle(base,{strokeColor:e.target.value}));
+        item.querySelector('.style-fill-color').addEventListener('input',e=>updateBaseStyle(base,{fillColor:e.target.value}));
+        bindRange('.style-stroke-width','strokeWidth',v=>Number(v),v=>`${v.toFixed(1)} px`);
+        bindRange('.style-stroke-opacity','strokeOpacity',v=>Number(v)/100,v=>`${Math.round((1-v)*100)}%`);
+        bindRange('.style-fill-opacity','fillOpacity',v=>Number(v)/100,v=>`${Math.round((1-v)*100)}%`);
+        const fillEnabled=item.querySelector('.style-fill-enabled');
+        const fillState=fillEnabled.parentElement.querySelector('b');
+        fillEnabled.addEventListener('change',()=>{
+          fillState.textContent=fillEnabled.checked?'ATIVADO':'DESATIVADO';
+          updateBaseStyle(base,{fillEnabled:fillEnabled.checked});
         });
-      };
+      }else{
+        item.querySelectorAll('.base-style-grid input').forEach(input=>input.disabled=true);
+      }
 
-      item.querySelector('.style-stroke-color').addEventListener('input',event=>{
-        updateBaseStyle(base,{strokeColor:event.target.value});
-      });
-      item.querySelector('.style-fill-color').addEventListener('input',event=>{
-        updateBaseStyle(base,{fillColor:event.target.value});
-      });
-      bindRange('.style-stroke-width','strokeWidth',value=>Number(value),value=>`${value.toFixed(1)} px`);
-      bindRange('.style-stroke-opacity','strokeOpacity',value=>Number(value)/100,value=>`${Math.round((1-value)*100)}%`);
-      bindRange('.style-fill-opacity','fillOpacity',value=>Number(value)/100,value=>`${Math.round((1-value)*100)}%`);
-
-      const fillEnabled=item.querySelector('.style-fill-enabled');
-      const fillState=fillEnabled.parentElement.querySelector('b');
-      fillEnabled.addEventListener('change',()=>{
-        fillState.textContent=fillEnabled.checked?'ATIVADO':'DESATIVADO';
-        updateBaseStyle(base,{fillEnabled:fillEnabled.checked});
-      });
-    }else{
-      item.querySelectorAll('.base-style-grid input').forEach(input=>input.disabled=true);
-    }
-
-    item.querySelector('.restore-base-style').addEventListener('click',()=>{
-      restoreBaseCatalogStyle(base);
+      item.querySelector('.restore-base-style').addEventListener('click',()=>restoreBaseCatalogStyle(base));
+      content.appendChild(item);
     });
 
-    list.appendChild(item);
+    list.appendChild(section);
   });
 
   const status=document.getElementById('catalogStatus');

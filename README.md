@@ -1,25 +1,9 @@
-# WEBGIS GEO — Editor de Estilos das Bases v1.1
+# WEBGIS GEO — Arquitetura de Análises v1
 
-Correção da versão inicial do editor de estilos.
+## Novidades
+- reconhecimento de `tipoAnalise`;
+- agrupamento temático recolhível no menu Configurações;
+- exibição do tipo de análise de cada base;
+- preservação de Municípios, ANM, Dashboard, Relatório e editor de estilos.
 
-## Problemas corrigidos
-
-- camadas não permanecem presas no mapa após serem desligadas;
-- alterações de estilo são aplicadas diretamente na camada existente;
-- carregamentos antigos são cancelados quando a camada é desligada;
-- o botão “Restaurar estilo do catálogo” volta corretamente ao padrão;
-- o estilo continua salvo localmente sem obrigar novo carregamento do GeoJSON.
-
-## Opções disponíveis
-
-- cor do contorno;
-- espessura da linha;
-- transparência do contorno;
-- cor do preenchimento;
-- transparência do preenchimento;
-- ativar ou desativar o preenchimento;
-- restaurar estilo original.
-
-## Publicação
-
-Substitua integralmente os arquivos do repositório `webgis-app` pelo conteúdo deste pacote.
+Nesta etapa, os novos tipos são apenas reconhecidos. As regras de Classificação Territorial e APP Hídrica entram nas próximas etapas.
