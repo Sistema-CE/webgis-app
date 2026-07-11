@@ -195,14 +195,15 @@ function renderBases(){
 
   groups.forEach((groupBases,groupName)=>{
     const section=document.createElement('section');
-    section.className='catalog-group';
+    section.className='catalog-group collapsed';
     const enabledCount=groupBases.filter(base=>base.active).length;
+    const visibleCount=groupBases.filter(base=>base.visible===true).length;
     section.innerHTML=`
-      <button class="catalog-group-header" type="button" aria-expanded="true">
-        <span><b>${escapeHtml(groupName)}</b><small>${enabledCount} de ${groupBases.length} ligada(s)</small></span>
+      <button class="catalog-group-header" type="button" aria-expanded="false">
+        <span><b>${escapeHtml(groupName)}</b><small>${enabledCount}/${groupBases.length} análise • ${visibleCount}/${groupBases.length} visualização</small></span>
         <span class="catalog-group-chevron">⌄</span>
       </button>
-      <div class="catalog-group-content"></div>`;
+      <div class="catalog-group-content" hidden></div>`;
 
     const header=section.querySelector('.catalog-group-header');
     const content=section.querySelector('.catalog-group-content');

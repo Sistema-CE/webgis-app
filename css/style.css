@@ -369,3 +369,5 @@ body.settings-modal-open{overflow:hidden}
 .catalog-group-content[hidden]{
   display:none!important;
 }
+
+.catalog-group-header small{letter-spacing:.2px;font-weight:700}
