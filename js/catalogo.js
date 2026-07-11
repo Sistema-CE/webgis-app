@@ -19,7 +19,9 @@ function normalizeCatalogBase(item){
     order:Number(item.ordem??999),
     description:item.descricao||'',
     version:item.versaoBase||'',
-    updatedAt:item.dataAtualizacao||item.dataBase||''
+    updatedAt:item.dataAtualizacao||item.dataBase||'',
+    role:String(item.papel||item.role||'').toLowerCase(),
+    codeField:item.campoCodigo||item.codeField||''
   };
 }
 

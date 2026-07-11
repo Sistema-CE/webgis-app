@@ -36,3 +36,12 @@ Esta versão divide o antigo `js/app.js` em arquivos funcionais, mantendo a mesm
 ## Publicação
 
 Envie o conteúdo desta pasta para a raiz do repositório `webgis-app`.
+
+
+## Versão Municípios v1
+
+- Reconhece bases com `papel: "municipios"` no catálogo online.
+- Calcula a área da AOI dentro de cada município.
+- Calcula o percentual da AOI em cada município.
+- Usa `campoNome` (ex.: `NM_MUN`) para identificar o município.
+- Mantém análise genérica para todas as demais bases.
