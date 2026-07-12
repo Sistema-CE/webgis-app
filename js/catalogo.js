@@ -137,6 +137,10 @@ function normalizeCatalogBase(item){
     specialReportEnabled:item.relatorioEspecial===true || item.relatorio===true,
     specialAnalysisEnabled:item.analiseEspecial===true,
     fieldMap:item.campos||item.fieldMap||{},
+    hydricGeometry:String(item.geometriaHidrica||item.hydricGeometry||'').toLowerCase(),
+    resourceType:String(item.tipoRecurso||item.resourceType||'').toLowerCase(),
+    defaultBuffer:Number(item.faixaPadrao??item.bufferPadrao??item.defaultBuffer??30),
+    searchDistance:Number(item.distanciaBusca??item.searchDistance??150),
     catalogStyle,
     style:mergeBaseStyle(id,catalogStyle)
   };

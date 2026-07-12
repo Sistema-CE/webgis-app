@@ -378,3 +378,9 @@ body.settings-modal-open{overflow:hidden}
 
 /* Classificação Territorial */
 .dashboard-card.territorial{border-left-color:#0369a1;background:#f0f9ff}
+
+/* Motor Hídrico Linear */
+.dashboard-card.hydric{
+  border-left-color:#0369a1;
+  background:#f0f9ff;
+}

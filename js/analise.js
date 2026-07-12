@@ -271,6 +271,17 @@ btnRun.onclick=async()=>{
       const anmProcesses=engineOutput.anmProcesses||null;
       const territorialClassification=engineOutput.territorialClassification||null;
       const hydricAnalysis=engineOutput.hydricAnalysis||null;
+
+      if(hydricAnalysis){
+        totalArea=hydricAnalysis.areaAppConsolidadaHa||0;
+        names.length=0;
+        hydricAnalysis.registros.forEach(record=>names.push(record.nome));
+        hitGeoms.length=0;
+        hitGeoms.push(...(hydricAnalysis.appGeometries||[]));
+        intersectedFeatures.length=0;
+        intersectedFeatures.push(...(hydricAnalysis.resourceFeatures||[]));
+      }
+
       const pct=aoiArea>0?(totalArea/aoiArea)*100:0;
       const uniqueNames=[...new Set(names)];
 
@@ -282,7 +293,7 @@ btnRun.onclick=async()=>{
         engineId:engineOutput.engineId||'generico',
         group:base.group,
         source:base.source,
-        hit:uniqueNames.length>0,
+        hit:hydricAnalysis?hydricAnalysis.cursosComAppNaAoi>0:uniqueNames.length>0,
         feature:uniqueNames.slice(0,8).join('; '),
         area:totalArea,
         pct,
@@ -303,9 +314,17 @@ btnRun.onclick=async()=>{
       });
 
       hitGeoms.forEach(geometry=>{
+        const hydricStyle=hydricAnalysis
+          ? {color:'#0369a1',weight:3,fillColor:'#38bdf8',fillOpacity:.30}
+          : {color:'#dc2626',weight:3,fillColor:'#ef4444',fillOpacity:.28};
         L.geoJSON(geometry,{
-          style:{color:'#dc2626',weight:3,fillColor:'#ef4444',fillOpacity:.28},
-          pointToLayer:(feature,latlng)=>L.circleMarker(latlng,{radius:7,color:'#dc2626',fillColor:'#ef4444',fillOpacity:.8})
+          style:hydricStyle,
+          pointToLayer:(feature,latlng)=>L.circleMarker(latlng,{
+            radius:7,
+            color:hydricStyle.color,
+            fillColor:hydricStyle.fillColor,
+            fillOpacity:.8
+          })
         }).addTo(hitLayerGroup);
       });
     }catch(error){
