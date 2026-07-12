@@ -114,6 +114,8 @@ function normalizeCatalogBase(item){
     visible:item.visivelInicialmente===true,
     name,
     group:item.grupo||item.group||'Outras Bases',
+    category:String(item.categoria||item.category||'outras').toLowerCase(),
+    family:String(item.familia||item.family||'geral').toLowerCase(),
     source:item.fonte||item.source||'',
     type,
     layer:item.layer||item.camada||'',
@@ -173,6 +175,53 @@ async function loadBases(){
 }
 
 function saveBases(){localStorage.setItem(LS_BASES,JSON.stringify(bases)); document.getElementById('baseCount').textContent=bases.filter(b=>b.active).length;}
+
+function normalizeCatalogToken(value){
+  return String(value||'').trim().toLowerCase();
+}
+
+function getCatalogBasesByCategory(category,options={}){
+  const token=normalizeCatalogToken(category);
+  const onlyActive=options.onlyActive!==false;
+  return bases.filter(base=>
+    normalizeCatalogToken(base.category)===token &&
+    (!onlyActive || base.active===true)
+  );
+}
+
+function getCatalogBasesByFamily(family,options={}){
+  const token=normalizeCatalogToken(family);
+  const onlyActive=options.onlyActive!==false;
+  return bases.filter(base=>
+    normalizeCatalogToken(base.family)===token &&
+    (!onlyActive || base.active===true)
+  );
+}
+
+function getCatalogBasesByCategoryAndFamily(category,family,options={}){
+  const categoryToken=normalizeCatalogToken(category);
+  const familyToken=normalizeCatalogToken(family);
+  const onlyActive=options.onlyActive!==false;
+  return bases.filter(base=>
+    normalizeCatalogToken(base.category)===categoryToken &&
+    normalizeCatalogToken(base.family)===familyToken &&
+    (!onlyActive || base.active===true)
+  );
+}
+
+function getActiveHydrographyBases(family=''){
+  if(family){
+    return getCatalogBasesByCategoryAndFamily('hidrografia',family,{onlyActive:true});
+  }
+  return getCatalogBasesByCategory('hidrografia',{onlyActive:true});
+}
+
+window.WEBGIS=window.WEBGIS||{};
+window.WEBGIS.getBasesCategoria=(category,options={})=>getCatalogBasesByCategory(category,options);
+window.WEBGIS.getBasesFamilia=(family,options={})=>getCatalogBasesByFamily(family,options);
+window.WEBGIS.getBasesCategoriaFamilia=(category,family,options={})=>getCatalogBasesByCategoryAndFamily(category,family,options);
+window.WEBGIS.getBasesHidrografia=(family='')=>getActiveHydrographyBases(family);
+
 function renderBases(){
   const list=document.getElementById('catalogBaseList');
   const activeCount=bases.filter(base=>base.active).length;
@@ -232,6 +281,8 @@ function renderBases(){
             <strong>${safeName}</strong>
             <span>${safeSource}</span>
             <span class="analysis-type-badge">Análise: ${analysisLabel}</span>
+            <span class="analysis-type-badge">Categoria: ${escapeHtml(base.category||'outras')}</span>
+            <span class="analysis-type-badge">Família: ${escapeHtml(base.family||'geral')}</span>
           </div>
           <div class="catalog-base-actions">
             <button class="base-style-toggle secondary" type="button">Editar estilo</button>
