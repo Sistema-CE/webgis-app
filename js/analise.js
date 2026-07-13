@@ -273,9 +273,9 @@ btnRun.onclick=async()=>{
       const hydricAnalysis=engineOutput.hydricAnalysis||null;
 
       if(hydricAnalysis){
-        totalArea=hydricAnalysis.areaAppConsolidadaHa||0;
+        totalArea=hydricAnalysis.areaProtecaoConsolidadaHa||0;
         names.length=0;
-        hydricAnalysis.registros.forEach(record=>names.push(record.nome));
+        (hydricAnalysis.registros||[]).forEach(record=>names.push(record.nome));
         hitGeoms.length=0;
         hitGeoms.push(...(hydricAnalysis.appGeometries||[]));
         intersectedFeatures.length=0;
@@ -293,7 +293,7 @@ btnRun.onclick=async()=>{
         engineId:engineOutput.engineId||'generico',
         group:base.group,
         source:base.source,
-        hit:hydricAnalysis?hydricAnalysis.cursosComAppNaAoi>0:uniqueNames.length>0,
+        hit:hydricAnalysis?hydricAnalysis.quantidade>0:uniqueNames.length>0,
         feature:uniqueNames.slice(0,8).join('; '),
         area:totalArea,
         pct,

@@ -27,6 +27,10 @@ WEBGIS_ANALYSIS.register({
       setores:[...(territorial.sectors||[])],
       populacaoTotal:territorial.population||0,
       domiciliosTotais:territorial.households||0,
+      geometrias:(result.baseFeatures||[]).map(feature=>({
+        situacao:String(feature?.properties?.situacao||feature?.properties?.SITUACAO||''),
+        feature
+      })),
       origem:result.base
     };
   },

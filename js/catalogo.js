@@ -139,7 +139,11 @@ function normalizeCatalogBase(item){
     fieldMap:item.campos||item.fieldMap||{},
     hydricGeometry:String(item.geometriaHidrica||item.hydricGeometry||'').toLowerCase(),
     resourceType:String(item.tipoRecurso||item.resourceType||'').toLowerCase(),
+    delineationMode:String(item.modoDelimitacao||item.delineationMode||'preliminar').toLowerCase(),
     defaultBuffer:Number(item.faixaPadrao??item.bufferPadrao??item.defaultBuffer??30),
+    urbanBuffer:Number(item.faixaUrbana??item.urbanBuffer??30),
+    ruralBufferUpTo20:Number(item.faixaRuralAte20??item.ruralBufferUpTo20??50),
+    ruralBufferAbove20:Number(item.faixaRuralAcima20??item.ruralBufferAbove20??100),
     searchDistance:Number(item.distanciaBusca??item.searchDistance??150),
     catalogStyle,
     style:mergeBaseStyle(id,catalogStyle)
