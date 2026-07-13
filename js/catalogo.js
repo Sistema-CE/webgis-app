@@ -370,6 +370,10 @@ function renderBases(){
 
   const status=document.getElementById('catalogStatus');
   if(status) status.textContent=`${activeCount} de ${bases.length} base(s) ligadas para análise.`;
+  if(typeof renderAllBasesAlphabetical==='function'){
+    const search=document.getElementById('catalogBaseSearch');
+    renderAllBasesAlphabetical(search?.value||'');
+  }
 }
 
 function isWmsBase(b){return (b.type==='wms'||b.type==='auto'||!b.type) && String(b.url||'').toLowerCase().includes('wms');}

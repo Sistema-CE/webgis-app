@@ -220,16 +220,46 @@
       const h=result.hydricAnalysis;
       if(result.dashboardEnabled!==true||!h) return '';
       if(!h.quantidade) return `<div><b>Nenhuma faixa hídrica alcança a Área de Interesse.</b></div>`;
-      const rules=h.tipo==='poligono'
-        ? `<div><b>Urbana:</b> ${fmt(h.faixaUrbanaMetros,0)} m</div>
-           <div><b>Rural até 20 ha:</b> ${fmt(h.faixaRuralAte20Metros,0)} m</div>
-           <div><b>Rural acima de 20 ha:</b> ${fmt(h.faixaRuralAcima20Metros,0)} m</div>`
-        : `<div><b>Faixa:</b> ${fmt(h.faixaMetros,0)} m</div>`;
+      let rules='';
+      if(h.tipo==='poligono'){
+        const applied=new Map();
+
+        (h.registros||[]).forEach(record=>{
+          if(record.faixaUrbanaMetros>0){
+            const key=`Urbana — ${fmt(record.faixaUrbanaMetros,0)} m`;
+            applied.set(key,(applied.get(key)||0)+1);
+          }
+
+          if(record.faixaRuralMetros>0){
+            const className=record.areaMassaHa<=20
+              ? 'Rural — massa até 20 ha'
+              : 'Rural — massa acima de 20 ha';
+            const key=`${className} — ${fmt(record.faixaRuralMetros,0)} m`;
+            applied.set(key,(applied.get(key)||0)+1);
+          }
+        });
+
+        const appliedItems=[...applied.entries()];
+        if(appliedItems.length===1){
+          rules=`<div class="hydric-applied-rule"><b>Faixa aplicada:</b><br>${escapeHtml(appliedItems[0][0])}</div>`;
+        }else if(appliedItems.length>1){
+          rules=`
+            <div class="hydric-applied-rule">
+              <b>Faixas aplicadas:</b>
+              <ul>${appliedItems.map(([label,count])=>
+                `<li>${escapeHtml(label)}${count>1?` — ${count} ocorrências`:''}</li>`
+              ).join('')}</ul>
+            </div>`;
+        }
+      }else{
+        rules=`<div class="hydric-applied-rule"><b>Faixa aplicada:</b><br>${fmt(h.faixaMetros,0)} m</div>`;
+      }
+
       return `
         <div><b>Modo:</b> Faixa preliminar de proteção</div>
         <div><b>Ocorrências:</b> ${h.quantidade}</div>
         <div><b>Interseção direta:</b> ${h.intersecoesDiretas}</div>
-        <div><b>Somente pela faixa:</b> ${h.somenteProximidade}</div>
+        ${h.somenteProximidade?`<div><b>Somente pela faixa:</b> ${h.somenteProximidade}</div>`:''}
         ${rules}
         <div><b>Área consolidada:</b> ${fmt(h.areaProtecaoConsolidadaHa,4)} ha (${fmt(h.percentualAoi,2)}%)</div>`;
     },
