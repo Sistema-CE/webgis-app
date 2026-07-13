@@ -110,7 +110,7 @@ function normalizeCatalogBase(item){
   const catalogStyle=catalogStyleFromItem(item,name);
   return {
     id,
-    active:item.ativo!==false && item.analisar!==false,
+    active:false,
     visible:item.visivelInicialmente===true,
     name,
     group:item.grupo||item.group||'Outras Bases',

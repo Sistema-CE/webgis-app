@@ -1,18 +1,12 @@
-# WEBGIS GEO — Medição e Dashboard Hídrico v2.2
+# WEBGIS GEO — Configurações e Presets v2.3
 
-## Ferramentas de medição
+## Alterações
 
-- Distância: clique nos pontos e finalize com duplo clique ou Enter.
-- Área: clique nos vértices e finalize com duplo clique ou Enter.
-- Escape cancela a medição em andamento.
-- Limpar medições remove todos os resultados.
-
-## Dashboard de massas d'água
-
-Agora mostra apenas as faixas efetivamente aplicadas:
-
-- Urbana — 30 m;
-- Rural — massa até 20 ha — 50 m;
-- Rural — massa acima de 20 ha — 100 m.
-
-Quando houver mais de um enquadramento, lista somente os encontrados e suas quantidades.
+- ferramentas de medição movidas para o controle vertical esquerdo;
+- seção Todas as Bases permite ligar e desligar bases;
+- seção Bases Organizadas por Categoria recolhida por padrão;
+- todas as bases novas iniciam desligadas;
+- nova seção Pré-configurações de Análise;
+- presets são salvos no localStorage;
+- aplicar preset substitui integralmente o conjunto de bases ativas;
+- exclusão de preset com confirmação.

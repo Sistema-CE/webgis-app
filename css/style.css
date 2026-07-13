@@ -578,3 +578,137 @@ body.settings-modal-open{overflow:hidden}
 .hydric-applied-rule li{
   margin:3px 0;
 }
+
+
+/* Controle vertical compacto de medição */
+.measurement-control{
+  margin-top:6px!important;
+}
+.measurement-control button{
+  display:block;
+  width:34px;
+  height:34px;
+  padding:0;
+  border:0;
+  border-bottom:1px solid #ccc;
+  border-radius:0;
+  background:#fff;
+  color:#1e293b;
+  font-size:16px;
+  line-height:34px;
+  cursor:pointer;
+}
+.measurement-control button:last-child{
+  border-bottom:0;
+}
+.measurement-control button:hover{
+  background:#f1f5f9;
+}
+.measurement-control button.active-measure{
+  background:#0f766e;
+  color:#fff;
+}
+
+/* Ativação na lista alfabética */
+.all-base-toggle-item{
+  padding:0;
+}
+.all-base-toggle-main{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  padding:10px 12px;
+}
+.all-base-toggle-main>div{
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+}
+.all-base-toggle-main b{
+  font-size:12px;
+}
+.all-base-toggle-main small{
+  font-size:10px;
+  color:#64748b;
+}
+.all-base-toggle-item details{
+  border-top:1px solid #e2e8f0;
+}
+.all-base-toggle-item details summary{
+  padding:7px 12px;
+  font-size:10px;
+  color:#475569;
+  cursor:pointer;
+}
+
+/* Presets */
+.preset-create-row{
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:8px;
+}
+.preset-create-row input{
+  min-width:0;
+  padding:9px 10px;
+  border:1px solid #cbd5e1;
+  border-radius:8px;
+}
+.preset-create-row button{
+  width:auto;
+  margin:0;
+}
+.preset-list{
+  display:grid;
+  gap:8px;
+  margin-top:12px;
+}
+.preset-item{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:10px 12px;
+  border:1px solid #dbe3ee;
+  border-radius:10px;
+  background:#fff;
+}
+.preset-info{
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+  min-width:0;
+}
+.preset-info b{
+  font-size:12px;
+}
+.preset-info small{
+  color:#64748b;
+  font-size:10px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.preset-actions{
+  display:flex;
+  gap:6px;
+  flex:0 0 auto;
+}
+.preset-actions button{
+  width:auto;
+  margin:0;
+  padding:7px 9px;
+  font-size:10px;
+}
+@media(max-width:640px){
+  .preset-create-row{
+    grid-template-columns:1fr;
+  }
+  .preset-item{
+    align-items:stretch;
+    flex-direction:column;
+  }
+  .preset-actions button{
+    flex:1;
+  }
+}
