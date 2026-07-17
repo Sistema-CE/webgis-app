@@ -1,12 +1,28 @@
-# WEBGIS GEO — Configurações e Presets v2.3
+# WEBGIS GEO — Pontos e Busca v2.4
 
-## Alterações
+## Pontos de Referência
 
-- ferramentas de medição movidas para o controle vertical esquerdo;
-- seção Todas as Bases permite ligar e desligar bases;
-- seção Bases Organizadas por Categoria recolhida por padrão;
-- todas as bases novas iniciam desligadas;
-- nova seção Pré-configurações de Análise;
-- presets são salvos no localStorage;
-- aplicar preset substitui integralmente o conjunto de bases ativas;
-- exclusão de preset com confirmação.
+- botão único e janela pop-up;
+- localização do dispositivo;
+- entrada UTM SIRGAS 2000;
+- vários pontos simultâneos;
+- nomes editáveis;
+- localizar, excluir individualmente e limpar todos;
+- armazenamento local.
+
+## Busca nas Bases
+
+- seleção de uma base do catálogo;
+- busca textual em todos os atributos;
+- até 100 resultados;
+- carregar somente uma feição no mapa;
+- baixar a feição individual em GeoJSON.
+
+## Busca no Mapa
+
+- pesquisa de endereços e localidades;
+- resultados do OpenStreetMap/Nominatim;
+- centralização e destaque no mapa;
+- cache local durante a sessão.
+
+A busca pública de endereços deve ser usada de forma manual e moderada.

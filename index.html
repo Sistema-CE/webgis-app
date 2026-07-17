@@ -31,14 +31,9 @@
           <div class="metric"><b id="aoiFeatCount">0</b><span>feições</span></div>
           <div class="metric"><b id="baseCount">0</b><span>bases ativas</span></div>
         </div>
-        <div class="point-reference-box">
-          <h3>Adicionar ponto de referência</h3>
-          <p class="small">O ponto não substitui a Área de Interesse. Ele funciona como referência no mapa e pode ser incluído no relatório.</p>
-          <div class="btns">
-            <button id="btnGpsLocation" type="button">📍 Minha localização</button>
-            <button id="btnOpenUtm" class="secondary" type="button">⌨️ Inserir coordenadas UTM</button>
-            <button id="btnClearPoints" class="danger" type="button">🗑️ Limpar pontos</button>
-          </div>
+        <div class="reference-tools-launch">
+          <button id="btnOpenReferencePoints" class="block" type="button">📍 Pontos de Referência</button>
+          <button id="btnOpenSearch" class="secondary block" type="button">🔎 Busca</button>
           <div id="pointStatus" class="status-box">Nenhum ponto de referência adicionado.</div>
         </div>
       </div>
@@ -155,5 +150,6 @@
 <script src="js/relatorio.js"></script>
 <script src="js/configuracoes.js"></script>
 <script src="js/pontos.js"></script>
+<script src="js/busca.js"></script>
 </body>
 </html>
